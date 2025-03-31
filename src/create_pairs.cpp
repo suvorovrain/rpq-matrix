@@ -4,8 +4,22 @@
 #include "iostream"
 
 extern "C" {
-#include "k2-tree/matrix.h"
+// #include "k2-tree/matrix.h" // Seems like bad include
+#include <stdint.h>
 }
+
+// got this from basics.h and comment include above
+void *myalloc (size_t n)
+
+   { void *p;
+     if (n == 0) return NULL;
+     p = malloc(n);
+     if (p == NULL)
+        { fprintf(stderr,"Error: malloc of %li bytes returned null\n",n);
+          exit(1);
+        }
+     return p;
+   }
 
 typedef struct
 { uint32_t s,p,o;

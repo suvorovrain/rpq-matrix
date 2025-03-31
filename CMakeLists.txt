@@ -47,7 +47,9 @@ include_directories(~/include
         ${CMAKE_HOME_DIRECTORY}/nfa/include
         ${CMAKE_HOME_DIRECTORY}/lib/matrix_gn/include
         ${CMAKE_HOME_DIRECTORY}/lib/matrix_p_gn/include
-        ${CMAKE_HOME_DIRECTORY}/lib/baseline_gn/include)
+        ${CMAKE_HOME_DIRECTORY}/lib/baseline_gn/include
+        ${CMAKE_HOME_DIRECTORY}/../GraphBLAS/Include
+        ${CMAKE_HOME_DIRECTORY}/..LAGraph/include)
 
 #link_directories(~/lib)
 
@@ -55,27 +57,35 @@ add_subdirectory(nfa)
 add_subdirectory(lib/matrix_gn)
 add_subdirectory(lib/matrix_p_gn)
 add_subdirectory(lib/baseline_gn)
+# add_subdirectory(../GraphBLAS/Include)
+# add_subdirectory(../LAGraph/include)
 
-add_executable(k2_tree_query src/k2_tree_query.cpp)
-target_link_libraries(k2_tree_query matrix_gn nfa)
+# add_executable(k2_tree_query src/k2_tree_query.cpp)
+# target_link_libraries(k2_tree_query matrix_gn nfa)
 
-add_executable(k2_tree_p_query src/k2_tree_p_query.cpp)
-target_link_libraries(k2_tree_p_query matrix_p_gn nfa)
+# add_executable(k2_tree_p_query src/k2_tree_p_query.cpp)
+# target_link_libraries(k2_tree_p_query matrix_p_gn nfa)
 
-add_executable(baseline_query src/baseline_query.cpp)
-target_link_libraries(baseline_query baseline_gn nfa)
+# add_executable(baseline_query src/baseline_query.cpp)
+# target_link_libraries(baseline_query baseline_gn nfa)
 
-add_executable(baseline_32_query src/baseline_32_query.cpp)
-target_link_libraries(baseline_32_query baseline_gn nfa)
+add_executable(baselineGB_query src/baselineGB_query.cpp)
+target_link_libraries(baselineGB_query baseline_gn nfa)
+
+# add_executable(baseline_32_query src/baseline_32_query.cpp)
+# target_link_libraries(baseline_32_query baseline_gn nfa)
 
 add_executable(create_pairs src/create_pairs.cpp)
 target_link_libraries(create_pairs matrix_gn)
 
-add_executable(k2_tree_build src/k2_tree_build.cpp)
-target_link_libraries(k2_tree_build matrix_gn)
+# add_executable(k2_tree_build src/k2_tree_build.cpp)
+# target_link_libraries(k2_tree_build matrix_gn)
 
-add_executable(baseline_32_build src/baseline_32_build.cpp)
-target_link_libraries(baseline_32_build baseline_gn)
+# add_executable(baseline_32_build src/baseline_32_build.cpp)
+# target_link_libraries(baseline_32_build baseline_gn)
 
-add_executable(baseline_build src/baseline_build.cpp)
-target_link_libraries(baseline_build baseline_gn)
+# add_executable(baseline_build src/baseline_build.cpp)
+# target_link_libraries(baseline_build baseline_gn)
+
+add_executable(baselineGB_build src/baselineGB_build.cpp)
+target_link_libraries(baselineGB_build baseline_gn)

@@ -2,18 +2,22 @@
 // Created by Adrián on 16/4/24.
 //
 
+extern "C"
+    {
+#include "../../../GraphBLAS/Include/GraphBLAS.h" // here put GB matirx
+#include "../../../LAGraph/include/LAGraph.h"
+    }
+    
 #ifndef RPQ_MATRIX_BASELINEGB_HPP
 #define RPQ_MATRIX_BASELINEGB_HPP
 #define fullSide (~(uint)0) // (*** got this from original matrix.h include. Maybe remove later idk ***)
 namespace bm_baselinegb
 {
-
-    extern "C"
-    {
-#include "../../../GraphBLAS/Include/GraphBLAS.h" // here put GB matirx
-#include "../../../LAGraph/include/LAGraph.h"
+    extern "C" {
 #include "baseline/utilstime.h" // here all good
-    }
+}
+
+    
 
     class wrapper
     {

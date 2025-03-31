@@ -176,7 +176,7 @@ namespace rpq {
         }
     }
 
-    template<class wrapper_type>
+    template<class wrapper_type> // GB!
     void run_query(const std::string &dataset, const std::string &index, const std::string &queries, uint n_preds, uint n_triples){
         typedef rpq::solver<wrapper_type> solver_type;
         typedef typename solver_type::matrix matrix;
@@ -209,13 +209,17 @@ namespace rpq {
                 bool rem = false;
                 if (!flag_o && !flag_s) {
                     res = solver.solve_var_to_var(query, rem);
-                } else if (flag_o && !flag_s) {
-                    res = solver.solve_var_to_con(query, o_id, rem);
-                } else if (!flag_o && flag_s) {
-                    res = solver.solve_con_to_var(query, s_id, rem);
-                } else{
-                    res = solver.solve_con_to_con(query, s_id, o_id, rem);
+                } else {
+                    std::cout << "work in progress";
+                    exit(1);
                 }
+                //  else if (flag_o && !flag_s) {
+                //     res = solver.solve_var_to_con(query, o_id, rem);
+                // } else if (!flag_o && flag_s) {
+                //     res = solver.solve_con_to_var(query, s_id, rem);
+                // } else{
+                //     res = solver.solve_con_to_con(query, s_id, o_id, rem);
+                // }
                 if(res.is_transposed){
                     s_matrix m = wrapper_type::transpose(res.m);
                     auto t2 = std::chrono::high_resolution_clock::now();
