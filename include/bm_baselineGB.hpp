@@ -1,31 +1,32 @@
 //
 // Created by Adrián on 16/4/24.
 //
-
+#include <cstdlib>
+#include <iostream>
+#include <string>
 extern "C"
-    {
+{
 #include "../../../GraphBLAS/Include/GraphBLAS.h" // here put GB matirx
 #include "../../../LAGraph/include/LAGraph.h"
-    }
-    
+}
+
 #ifndef RPQ_MATRIX_BASELINEGB_HPP
 #define RPQ_MATRIX_BASELINEGB_HPP
 #define fullSide (~(uint)0) // (*** got this from original matrix.h include. Maybe remove later idk ***)
 namespace bm_baselinegb
 {
-    extern "C" {
+    extern "C"
+    {
 #include "baseline/utilstime.h" // here all good
-}
-
-    
+    }
 
     class wrapper
     {
         // TODO: add error handling. and think about memory leaks
     public:
         static const uint64_t full_side = fullSide;
-        typedef GrB_Matrix matrix_type;    // (*** in original this is a pointer to matrix ***)
-        typedef GrB_Matrix *s_matrix_type; // (*** and this is matrix itself ***)
+        typedef GrB_Matrix matrix_type;   // (*** in original this is a pointer to matrix ***)
+        typedef GrB_Matrix s_matrix_type; // (*** and this is matrix itself ***)
 
         /*    (*** this used only in baseline_build.cpp. I'll just changed it to GB matrix creation in that file.***)
 
@@ -115,8 +116,17 @@ namespace bm_baselinegb
         // loads matrix from file, which must be opened for reading
         static inline GrB_Matrix load(FILE *file)
         {
-            GrB_Matrix A;
-            LAGraph_MMRead(&A, file, "message");
+            GrB_Matrix A = NULL;
+
+            GrB_Info info = LAGraph_MMRead(&A, file, NULL);
+
+            if (info != GrB_SUCCESS)
+            {
+                std::cerr << "Error occured while reading the matrix: " << info << std::endl;
+                return NULL;
+            }
+
+            std::cout << "done reading" << std::endl;
             return A;
         };
 
@@ -347,30 +357,90 @@ namespace bm_baselinegb
                 GrB_Matrix_nrows(&nrows, A);
                 GrB_Matrix_ncols(&ncols, A);
                 E = id(nrows);
-                C = sum1(row,E, C,col); // can i pass C as argument hmmmmmm...
+                C = sum1(row, E, C, col); // can i pass C as argument hmmmmmm...
             }
             return C;
         };
 
         // computes [row] A B* [col] (pos=0) or [row] A B+ [col] (pos=1)
-        static inline GrB_Matrix mult_clos1 (uint64_t row, GrB_Matrix A, GrB_Matrix B, uint pos, uint64_t col){
-            
-            if (row == full_side && col == full_side){
-                GrB_Matrix M1,M;
-                M1 = clos(B,pos);
-                M = mult(A,M1);
+        static inline GrB_Matrix mult_clos1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint pos, uint64_t col)
+        {
+            GrB_Index nrowsA, ncolsA, nrowsB, ncolsB;
+            GrB_Matrix_nrows(&nrowsA, A);
+            GrB_Matrix_ncols(&ncolsA, A);
+            GrB_Matrix_nrows(&nrowsB, B);
+            GrB_Matrix_ncols(&ncolsB, B);
+
+            if (row == full_side && col == full_side)
+            {
+                GrB_Matrix M1, M;
+                M1 = clos(B, pos);
+                M = mult(A, M1);
                 GrB_Matrix_free(&M1);
                 return M;
-            } else if (row != full_side && col != full_side){
-                
             }
-            // return matMultClos1(row, A, B, pos, col);
+            else if (row != full_side && col != full_side)
+            {
+                GrB_Matrix Bclos_col = clos1(full_side, B, pos, col);
+                GrB_Matrix result = mult1(row, A, Bclos_col, full_side);
+                GrB_Matrix_free(&Bclos_col);
+                return result;
+            }
+            else if (row == full_side && col != full_side)
+            {
+                GrB_Matrix Bclos_col = clos1(full_side, B, pos, col);
+                GrB_Matrix result = mult(A, Bclos_col);
+                GrB_Matrix_free(&Bclos_col);
+                return result;
+            }
+            else
+            {
+                GrB_Matrix Bclos = clos(B, pos);
+                GrB_Matrix result = mult1(row, A, Bclos, full_side);
+                GrB_Matrix_free(&Bclos);
+                return result;
+            }
         };
 
         //     // computes [row] A* B [col] (pos=0) or [row] A+ B [col] (pos=1)
-        //     static inline matrix clos_mult1 (uint64_t row, matrix A, uint pos, matrix B, uint64_t col){
-        //         return matClosMult1(row, A, pos, B, col);
-        //     };
+        static inline GrB_Matrix clos_mult1(uint64_t row, GrB_Matrix A, uint pos, GrB_Matrix B, uint64_t col)
+        {
+            GrB_Index nrowsA, ncolsA, nrowsB, ncolsB;
+            GrB_Matrix_nrows(&nrowsA, A);
+            GrB_Matrix_ncols(&ncolsA, A);
+            GrB_Matrix_nrows(&nrowsB, B);
+            GrB_Matrix_ncols(&ncolsB, B);
+
+            if (row == full_side && col == full_side)
+            {
+                GrB_Matrix M1, M;
+                M1 = clos(A, pos);
+                M = mult(M1, B);
+                GrB_Matrix_free(&M1);
+                return M;
+            }
+            else if (row != full_side && col != full_side)
+            {
+                GrB_Matrix Aclos_row = clos1(row, A, pos, full_side);
+                GrB_Matrix result = mult1(full_side, Aclos_row, B, col);
+                GrB_Matrix_free(&Aclos_row);
+                return result;
+            }
+            else if (row == full_side && col != full_side)
+            {
+                GrB_Matrix Aclos = clos(A, pos);
+                GrB_Matrix result = mult1(full_side, Aclos, B, col);
+                GrB_Matrix_free(&Aclos);
+                return result;
+            }
+            else
+            {
+                GrB_Matrix Aclos_row = clos1(row, A, pos, full_side);
+                GrB_Matrix result = mult(Aclos_row, B);
+                GrB_Matrix_free(&Aclos_row);
+                return result;
+            }
+        };
     };
 }
 
