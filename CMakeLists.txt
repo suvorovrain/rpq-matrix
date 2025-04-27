@@ -51,7 +51,9 @@ include_directories(~/include
         ${CMAKE_HOME_DIRECTORY}/../GraphBLAS/Include
         ${CMAKE_HOME_DIRECTORY}/..LAGraph/include)
 
-#link_directories(~/lib)
+link_directories(~/lib
+        ${CMAKE_HOME_DIRECTORY}/../GraphBLAS/build
+        ${CMAKE_HOME_DIRECTORY}/../LAGraph/build/src)
 
 add_subdirectory(nfa)
 add_subdirectory(lib/matrix_gn)
@@ -70,13 +72,13 @@ add_subdirectory(lib/baseline_gn)
 # target_link_libraries(baseline_query baseline_gn nfa)
 
 add_executable(baselineGB_query src/baselineGB_query.cpp)
-target_link_libraries(baselineGB_query baseline_gn nfa)
+target_link_libraries(baselineGB_query baseline_gn nfa graphblas lagraph)
 
 # add_executable(baseline_32_query src/baseline_32_query.cpp)
 # target_link_libraries(baseline_32_query baseline_gn nfa)
 
 add_executable(create_pairs src/create_pairs.cpp)
-target_link_libraries(create_pairs matrix_gn)
+target_link_libraries(create_pairs matrix_gn )
 
 # add_executable(k2_tree_build src/k2_tree_build.cpp)
 # target_link_libraries(k2_tree_build matrix_gn)
@@ -88,4 +90,4 @@ target_link_libraries(create_pairs matrix_gn)
 # target_link_libraries(baseline_build baseline_gn)
 
 add_executable(baselineGB_build src/baselineGB_build.cpp)
-target_link_libraries(baselineGB_build baseline_gn)
+target_link_libraries(baselineGB_build baseline_gn graphblas lagraph)
