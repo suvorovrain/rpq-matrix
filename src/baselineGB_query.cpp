@@ -23,7 +23,13 @@
 
 
 int main(int argc, char **argv) {
-
+    GrB_Info info;
+    info = GrB_init(GrB_NONBLOCKING);
+    if (info != GrB_SUCCESS){
+        fprintf(stderr, "Initialization failed!\n");
+        GrB_finalize();
+        return 1;
+    }
     if (argc < 5) {
         std::cerr << "\tUsage: " << argv[0] << " <dataset> <queries> <n_preds> <n_triples>" << std::endl;
         exit(1);
