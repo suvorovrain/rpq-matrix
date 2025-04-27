@@ -279,18 +279,13 @@ namespace rpq
                     res = solver.solve_var_to_var(query, rem);
                     std::cout << "DEBUG: after solver var to var" << std::endl;
                 }
-                else
-                {
-                    std::cout << "work in progress";
-                    exit(1);
+                 else if (flag_o && !flag_s) {
+                    res = solver.solve_var_to_con(query, o_id, rem);
+                } else if (!flag_o && flag_s) {
+                    res = solver.solve_con_to_var(query, s_id, rem);
+                } else{
+                    res = solver.solve_con_to_con(query, s_id, o_id, rem);
                 }
-                //  else if (flag_o && !flag_s) {
-                //     res = solver.solve_var_to_con(query, o_id, rem);
-                // } else if (!flag_o && flag_s) {
-                //     res = solver.solve_con_to_var(query, s_id, rem);
-                // } else{
-                //     res = solver.solve_con_to_con(query, s_id, o_id, rem);
-                // }
                 // (*** get number of nonzero values ***)
                 GrB_Index nvals;
                 GrB_Matrix_nvals(&nvals, res.m);
