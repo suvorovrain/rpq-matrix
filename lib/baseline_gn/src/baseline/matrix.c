@@ -1001,10 +1001,12 @@ matrix matClos0 (matrix A, uint pos)
     uint elems;
 
     elems = A->elems;
+    printf("%d:::%d\n",A->height,A->width);
     P = matMult (A,A);
     S = matSum (A,P);
     while (S->elems != elems)
     { elems = S->elems;
+        printf("%d\n",S->elems);
         matDestroy(P);
         P = matMult(S,S);
         M = matSum(S,P);
@@ -1012,11 +1014,13 @@ matrix matClos0 (matrix A, uint pos)
         S = M;
     }
     matDestroy(P);
+    printf("%d\n",S->elems);
     if (!pos)
     { Id = matId(mmax(A->width,A->height));
         M = S; S = matSum(S,Id); matDestroy(M);
         matDestroy(Id);
     }
+    printf("%d\n",S->elems);
     return S;
 }
 

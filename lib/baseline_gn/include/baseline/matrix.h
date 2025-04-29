@@ -82,6 +82,7 @@ matrix matMult1 (uint row, matrix A, matrix B, uint col);
 
 // transitive closure of a matrix, pos says if it's + rather than *
 matrix matClos (matrix A, uint pos);
+matrix matClos0 (matrix A, uint pos);
 
 // versions to choose one row or one column, or both
 matrix matClos1 (uint row, matrix A, uint pos, uint col);

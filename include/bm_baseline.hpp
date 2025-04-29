@@ -110,7 +110,7 @@ namespace bm_baseline {
 
         // transitive closure of a matrix, pos says if it's + rather than *
         static inline matrix clos (matrix A, uint pos){
-            return matClos(A, pos);
+            return matClos0(A, pos);
         };
 
         // versions to choose one row or one column, or both
