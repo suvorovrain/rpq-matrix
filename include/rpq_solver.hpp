@@ -304,7 +304,10 @@ namespace rpq
                             matrix A;
                             s_matrix sA;
                             A = get_matrix(sA, a, (pred > SIZE));
-                            matrix e = wrapper::empty(A->height, A->width);
+                            GrB_Index height, width;
+                            GrB_Matrix_nrows(&height, A);
+                            GrB_Matrix_ncols(&width, A);
+                            matrix e = wrapper::empty(height, width);
                             matrix m = wrapper::sum1(wrapper::full_side, A, e, col);
                             wrapper::destroy(e);
                             res.insert(res.begin(), data_type{m, false, true, true});
@@ -594,7 +597,10 @@ namespace rpq
                         matrix A;
                         s_matrix sA;
                         A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
-                        matrix Id = wrapper::id1(std::max(A->height, A->width), col);
+                        GrB_Index height, width;
+                        GrB_Matrix_nrows(&height, A);
+                        GrB_Matrix_ncols(&width, A);
+                        matrix Id = wrapper::id1(std::max(height, width), col);
                         matrix tmp = wrapper::sum1(wrapper::full_side, A, Id, col);
                         wrapper::destroy(Id);
                         if (ll.front().is_tmp)
@@ -624,7 +630,10 @@ namespace rpq
                             s_matrix sA;
                             matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
                             A = get_matrix(sA, a, (pred > SIZE));
-                            matrix e = wrapper::empty(A->height, A->width);
+                            GrB_Index height, width;
+                            GrB_Matrix_nrows(&height, A);
+                            GrB_Matrix_ncols(&width, A);
+                            matrix e = wrapper::empty(height, width);
                             matrix m = wrapper::sum1(row, A, e, wrapper::full_side);
                             wrapper::destroy(e);
                             res.insert(res.begin(), data_type{m, false, true, true});
@@ -892,7 +901,10 @@ namespace rpq
                         matrix A;
                         s_matrix sA;
                         A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
-                        matrix Id = wrapper::id1(std::max(A->height, A->width), row);
+                        GrB_Index height, width;
+                        GrB_Matrix_nrows(&height, A);
+                        GrB_Matrix_ncols(&width, A);
+                        matrix Id = wrapper::id1(std::max(height, width), row);
                         matrix tmp = wrapper::sum1(row, ll.front().m, Id, wrapper::full_side);
                         wrapper::destroy(Id);
                         if (ll.front().is_tmp)
@@ -922,7 +934,10 @@ namespace rpq
                             s_matrix sA;
                             matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
                             A = get_matrix(sA, a, (pred > SIZE));
-                            matrix e = wrapper::empty(A->height, A->width);
+                            GrB_Index height, width;
+                            GrB_Matrix_nrows(&height, A);
+                            GrB_Matrix_ncols(&width, A);
+                            matrix e = wrapper::empty(height, width);
                             matrix m = wrapper::sum1(row, A, e, col);
                             wrapper::destroy(e);
                             res.insert(res.begin(), data_type{m, false, true, true});
@@ -1213,7 +1228,10 @@ namespace rpq
                         matrix A;
                         s_matrix sA;
                         A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
-                        matrix Id = wrapper::id1(std::max(A->height, A->width), col);
+                        GrB_Index height, width;
+                        GrB_Matrix_nrows(&height, A);
+                        GrB_Matrix_ncols(&width, A);
+                        matrix Id = wrapper::id1(std::max(height, width), col);
                         matrix tmp = wrapper::sum1(row, ll.front().m, Id, col);
                         wrapper::destroy(Id);
                         if (ll.front().is_tmp)
@@ -1309,29 +1327,29 @@ namespace rpq
             return res.front();
         }
 
-        // data_type solve_con_to_var(std::string &query, int s_id, bool &rem)
-        // {
-        //     list_type res;
-        //     RpqTree rpqTree(query, map_P, m_matrices.size());
-        //     traversal_row_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, res);
-        //     return res.front();
-        // }
+        data_type solve_con_to_var(std::string &query, int s_id, bool &rem)
+        {
+            list_type res;
+            RpqTree rpqTree(query, map_P, m_matrices.size());
+            traversal_row_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, res);
+            return res.front();
+        }
 
-        // data_type solve_var_to_con(std::string &query, int o_id, bool &rem)
-        // {
-        //     list_type res;
-        //     RpqTree rpqTree(query, map_P, m_matrices.size());
-        //     traversal_col_fixed(&rpqTree, rpqTree.root(), ROOT, o_id, res);
-        //     return res.front();
-        // }
+        data_type solve_var_to_con(std::string &query, int o_id, bool &rem)
+        {
+            list_type res;
+            RpqTree rpqTree(query, map_P, m_matrices.size());
+            traversal_col_fixed(&rpqTree, rpqTree.root(), ROOT, o_id, res);
+            return res.front();
+        }
 
-        // data_type solve_con_to_con(std::string &query, int s_id, int o_id, bool &rem)
-        // {
-        //     list_type res;
-        //     RpqTree rpqTree(query, map_P, m_matrices.size());
-        //     traversal_row_col_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, o_id, res);
-        //     return res.front();
-        // }
+        data_type solve_con_to_con(std::string &query, int s_id, int o_id, bool &rem)
+        {
+            list_type res;
+            RpqTree rpqTree(query, map_P, m_matrices.size());
+            traversal_row_col_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, o_id, res);
+            return res.front();
+        }
     };
 
 }
