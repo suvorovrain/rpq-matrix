@@ -13,6 +13,8 @@ extern "C"
 #ifndef RPQ_MATRIX_BASELINEGB_HPP
 #define RPQ_MATRIX_BASELINEGB_HPP
 #define fullSide (~(uint)0) // (*** got this from original matrix.h include. Maybe remove later idk ***)
+
+#define mmax(x, y) (((x) > (y)) ? (x) : (y))
 namespace bm_baselinegb
 {
     extern "C"
@@ -298,52 +300,79 @@ namespace bm_baselinegb
 
         static inline GrB_Matrix pow(GrB_Matrix A, uint64_t row, uint64_t col)
         {
-            GrB_Matrix plusA, powA; // plusA stores sum of matrix powers
             GrB_Index nrows, ncols;
             GrB_Matrix_nrows(&nrows, A);
             GrB_Matrix_ncols(&ncols, A);
-            GrB_Matrix_new(&plusA, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_new(&powA, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_dup(&powA, A);
-            GrB_Matrix_dup(&plusA, A);
-            bool is_equal = false;
-            while (!is_equal)
-            {
-                // A^{k} = A^{k-1} * A
-                powA = mult1(row, powA, A, col);
-                // GrB_mxm(powA, GrB_NULL, GrB_NULL, GrB_LOR_LAND_SEMIRING_BOOL, powA, A, GrB_NULL);
 
-                // compute (A + ... + A^{k-1}) + A^k
-                GrB_Matrix summ;
-                summ = sum1(row, plusA, powA, col);
+            GrB_Matrix result;
+            GrB_Matrix_new(&result, GrB_BOOL, nrows, ncols);
+            GrB_Matrix_dup(&result, A);
 
-                // compare (A + ... + A^{k-1}) and (A + ... + A^{k-1} + A^k)
-                GrB_Matrix compare;
-                GrB_Matrix_new(&compare, GrB_BOOL, nrows, ncols);
-                GrB_Matrix_eWiseAdd_BinaryOp(compare, GrB_NULL, GrB_NULL, GrB_EQ_BOOL, summ, plusA, GrB_NULL);
-                GrB_Matrix_reduce_BOOL(&is_equal, GrB_NULL, GrB_LAND_MONOID_BOOL, compare, GrB_NULL);
+            GrB_Matrix prev;
+            GrB_Matrix_new(&prev, GrB_BOOL, nrows, ncols);
 
-                plusA = summ;
-            }
-            return plusA;
+            GrB_Index prev_nvals = 0, result_nvals = 0;
+            bool changed;
+            do
+            {   
+                GrB_Index nvals;
+                GrB_Matrix_nvals(&nvals, result);
+                std::cout << nvals << std::endl;
+
+                GrB_Matrix_dup(&prev, result);
+
+   
+                GrB_Matrix temp;
+                GrB_Matrix_new(&temp, GrB_BOOL, nrows, ncols);
+                GrB_mxm(temp, GrB_NULL, GrB_NULL, GrB_LOR_LAND_SEMIRING_BOOL, result, A, GrB_NULL);
+                GrB_Matrix_eWiseAdd_BinaryOp(result, GrB_NULL, GrB_NULL, GrB_LOR, result, temp, GrB_NULL);
+
+                GrB_Matrix_free(&temp);
+
+   
+                GrB_Matrix_nvals(&prev_nvals, prev);
+                GrB_Matrix_nvals(&result_nvals, result);
+
+
+                changed = result_nvals != prev_nvals;
+
+                GrB_Matrix_free(&prev);
+                GrB_Matrix_dup(&prev, result); 
+
+            } while (changed);
+
+            GrB_Matrix_free(&prev);
+            return result;
         }
 
-        // transitive closure of a matrix, pos says if it's + rather than *
+        // // transitive closure of a matrix, pos says if it's + rather than *
         static inline GrB_Matrix clos(GrB_Matrix A, uint pos)
         {
-            GrB_Matrix C;
-            C = pow(A, full_side, full_side);
+            GrB_Matrix C = pow(A, full_side, full_side);
+            GrB_Index nvals;
+                GrB_Matrix_nvals(&nvals, C);
+                std::cout << nvals << std::endl;
+
             if (!pos)
-            { // (*** Kleene Star ***)
-                GrB_Matrix E;
+            {
+                std::cout << "a" << std::endl;
                 GrB_Index nrows, ncols;
                 GrB_Matrix_nrows(&nrows, A);
                 GrB_Matrix_ncols(&ncols, A);
-                E = id(nrows);
-                C = sum(E, C); // can i pass C as argument hmmmmmm...
+                std::cout << nrows << ":::" << ncols << std::endl;
+                GrB_Matrix E = id(mmax(nrows, ncols));
+                GrB_Matrix summ;
+                GrB_Matrix_new(&summ, GrB_BOOL, nrows, ncols);
+                summ = sum(C,E);
+                GrB_Matrix_free(&C);
+                GrB_Matrix_free(&E);
+                C = summ;
             }
+                GrB_Matrix_nvals(&nvals, C);
+                std::cout << nvals << std::endl;
+
             return C;
-        };
+        }
 
         // versions to choose one row or one column, or both
         static inline GrB_Matrix clos1(uint64_t row, GrB_Matrix A, uint pos, uint64_t col)
