@@ -242,7 +242,7 @@ namespace rpq
         typedef typename solver_type::s_matrix s_matrix;
 
         solver_type solver(dataset, index, n_preds, n_triples);
-        std::cout << "debug: after solver" << std::endl;
+        // std::cout << "debug: after solver" << std::endl;
         std::string query, line, l2;
         uint64_t i = 1;
         uint64_t elems;
@@ -251,14 +251,14 @@ namespace rpq
         {
             getline(ifs_q, line);
             l2 = line;
-            std::cout << line << std::endl;
+            // std::cout << line << std::endl;
             query.clear();
 
             bool flag_s, flag_o;
             int s_id, o_id;
-            std::cout << "DEBUG: before parsing query" << std::endl;
+            // std::cout << "DEBUG: before parsing query" << std::endl;
             bool ok = rpq::utils::parse_query(line, solver.map_SO, solver.map_P, query, flag_s, s_id, flag_o, o_id);
-            std::cout << "DEBUG: after parsing query" << std::endl;
+            // std::cout << "DEBUG: after parsing query" << std::endl;
             if (!ok)
             {
                 std::cout << i << ";0;0" << std::endl;
@@ -273,11 +273,11 @@ namespace rpq
                 // auto t1 = std::chrono::high_resolution_clock::now();
                 typename solver_type::data_type res;
                 bool rem = false;
-                std::cout << "DEBUG: before solver var to var" << std::endl;
+                // std::cout << "DEBUG: before solver var to var" << std::endl;
                 if (!flag_o && !flag_s)
                 {
                     res = solver.solve_var_to_var(query, rem);
-                    std::cout << "DEBUG: after solver var to var" << std::endl;
+                    // std::cout << "DEBUG: after solver var to var" << std::endl;
                 }
                  else if (flag_o && !flag_s) {
                     res = solver.solve_var_to_con(query, o_id, rem);
@@ -295,7 +295,7 @@ namespace rpq
                     auto t2 = std::chrono::high_resolution_clock::now();
                     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
-                    std::cout << i << ";" << nvals << ";" << t << std::endl;
+                    std::cout << i << ";;" << nvals << ";" << t << std::endl;
                 }
                 else
                 {
