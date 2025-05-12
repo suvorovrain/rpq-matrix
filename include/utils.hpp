@@ -251,14 +251,11 @@ namespace rpq
         {
             getline(ifs_q, line);
             l2 = line;
-            // std::cout << line << std::endl;
             query.clear();
 
             bool flag_s, flag_o;
             int s_id, o_id;
-            // std::cout << "DEBUG: before parsing query" << std::endl;
             bool ok = rpq::utils::parse_query(line, solver.map_SO, solver.map_P, query, flag_s, s_id, flag_o, o_id);
-            // std::cout << "DEBUG: after parsing query" << std::endl;
             if (!ok)
             {
                 std::cout << i << ";0;0" << std::endl;
@@ -266,18 +263,16 @@ namespace rpq
             else
             {
                 query = rpq::utils::remove_unnecessary_parentheses(query);
-                std::cerr << query << std::endl;
+                // std::cerr << query << std::endl;
 
                 auto t1 = std::chrono::high_resolution_clock::now();
                 wrapper_type::time_begin();
                 // auto t1 = std::chrono::high_resolution_clock::now();
                 typename solver_type::data_type res;
                 bool rem = false;
-                // std::cout << "DEBUG: before solver var to var" << std::endl;
                 if (!flag_o && !flag_s)
                 {
                     res = solver.solve_var_to_var(query, rem);
-                    // std::cout << "DEBUG: after solver var to var" << std::endl;
                 }
                  else if (flag_o && !flag_s) {
                     res = solver.solve_var_to_con(query, o_id, rem);
@@ -286,22 +281,25 @@ namespace rpq
                 } else{
                     res = solver.solve_con_to_con(query, s_id, o_id, rem);
                 }
-                // (*** get number of nonzero values ***)
-                GrB_Index nvals;
-                GrB_Matrix_nvals(&nvals, res.m);
                 if (res.is_transposed)
                 {
                     s_matrix m = wrapper_type::transpose(res.m);
                     auto t2 = std::chrono::high_resolution_clock::now();
+                    // (*** get number of nonzero values ***)
+                    GrB_Index nvals;
+                    GrB_Matrix_nvals(&nvals, res.m);
                     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
-                    std::cout << i << ";;" << nvals << ";" << t << std::endl;
+                    std::cout << i << ";" << nvals << ";" << t << std::endl;
                 }
                 else
                 {
                     auto t2 = std::chrono::high_resolution_clock::now();
+                    // (*** get number of nonzero values ***)
+                    GrB_Index nvals;
+                    GrB_Matrix_nvals(&nvals, res.m);
                     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-                    std::cout << i << ";" << nvals << ";" << t << std::endl;
+                    std::cout << i << ";" << nvals << ";" << t<< std::endl;
                     if (res.is_tmp)
                         wrapper_type::destroy(res.m);
                 }

@@ -30,36 +30,26 @@ namespace bm_baselinegb
         typedef GrB_Matrix matrix_type;   // (*** in original this is a pointer to matrix ***)
         typedef GrB_Matrix s_matrix_type; // (*** and this is matrix itself ***)
 
-        /*    (*** this used only in baseline_build.cpp. I'll just changed it to GB matrix creation in that file.***)
-
-         // creates matrix of width x height with n cells (2n ints row,col)
-         // reorders cells array
-         static inline matrix_type create(uint64_t height, uint64_t width, uint64_t n, uint *cells){
-             return matCreate(height, width, n, cells);
-         };
-        */
-
         static void time_begin()
         {
             time_beg();
         }
 
-        // destroys matrix (*** it's just a free for matrix. changed it to GB free***)
+        // destroys matrix
         static inline void destroy(GrB_Matrix M)
         {
             GrB_Matrix_free(&M);
         };
 
-        /* (*** this function is using only in lib matrix logic and utils. GB by default creates empty matrix (i hope so).***) */
         // creates an empty matrix
         static inline GrB_Matrix empty(uint64_t height, uint64_t width)
         {
             GrB_Matrix A;
             GrB_Matrix_new(&A, GrB_BOOL, height, width);
-            return A; // not sure about matrix type, but i think it's bool
+            return A;
         };
 
-        // creates an identity matrix (*** i moved here logic of creation of id matrix via GB tools ***)
+        // creates an identity matrix
         static inline GrB_Matrix id(uint64_t side)
         {
             GrB_Matrix E;
@@ -75,24 +65,23 @@ namespace bm_baselinegb
             return E;
         };
 
-        // (*** this is using in rpq_solver. i just made matrix with one non zero element***)
         // version of identity matrix with one row or column
         static inline matrix_type id1(uint64_t side, uint64_t rc)
         {
             GrB_Matrix E;
             GrB_Matrix_new(&E, GrB_BOOL, side, side);
-            GrB_Matrix_setElement_BOOL(E, true, rc, rc);
+            GrB_Matrix_setElement_BOOL(E, true, rc - 1, rc - 1);
             return E;
         };
 
-        /* (*** seems like this is not used in rpq solver logic***)
-        // creates a new copy of A, with its own data
-        static inline matrix copy(matrix A){
-            return matCopy(A);
+        static inline matrix_type mat_one(uint64_t height, uint64_t width, uint64_t r, uint64_t c)
+        {
+            GrB_Matrix E;
+            GrB_Matrix_new(&E, GrB_BOOL, height, width);
+            GrB_Matrix_setElement_BOOL(E, true, r - 1, c - 1);
+            return E;
         };
-        */
 
-        // (*** ATTENTION: danger place here. in original this function return struct, not a pointer.***)
         // transpose a matrix, creating a non-allocated copy that shares the
         // data. You need not (and should not) matDestroy this copy
         // use *M = matTranspose(M) to actually transpose M
@@ -107,33 +96,47 @@ namespace bm_baselinegb
             return MT;
         };
 
-        //  (*** ATTENTION: this is simple funciton for result saving. I need to use GB method for this. ***)
         // writes M to file, which must be opened for writing
         static inline void save(GrB_Matrix M, FILE *file)
         {
             GxB_Matrix_fprint(M, "M", GxB_COMPLETE, file);
         };
 
-        // (*** ATTENTION: used in rpq_solver. this is maybe bad. cuz LAGraph_MMRead read mtx file ***)
         // loads matrix from file, which must be opened for reading
         static inline GrB_Matrix load(FILE *file)
         {
             GrB_Matrix A = NULL;
-
             GrB_Info info = LAGraph_MMRead(&A, file, NULL);
-
+            GrB_Matrix_wait(A, GrB_COMPLETE);
             if (info != GrB_SUCCESS)
             {
                 std::cerr << "Error occured while reading the matrix: " << info << std::endl;
                 return NULL;
             }
 
-            std::cout << "done reading" << std::endl;
-            return A;
-        };
+            GrB_Index nrows, ncols;
+            GrB_Matrix_nrows(&nrows, A);
+            GrB_Matrix_ncols(&ncols, A);
 
-        /* (*** ATTENTION: this method returns the number of bytes that matrix occupies.
-        maybe GB method works other way ***) */
+            GrB_Matrix B = NULL;
+            GrB_Matrix_new(&B, GrB_BOOL, nrows + 1, ncols + 1);
+
+            for (GrB_Index i = 0; i < nrows; ++i)
+            {
+                for (GrB_Index j = 0; j < ncols; ++j)
+                {
+                    bool val;
+                    if (GrB_Matrix_extractElement_BOOL(&val, A, i, j) == GrB_SUCCESS)
+                    {
+                        GrB_Matrix_setElement_BOOL(B, val, i, j);
+                    }
+                }
+            }
+
+            GrB_Matrix_free(&A);
+            return B;
+        }
+
         // space of the matrix, in w-bit words
         static inline uint64_t space(GrB_Matrix M)
         {
@@ -142,34 +145,37 @@ namespace bm_baselinegb
             return memory_usage;
         };
 
-        /* (*** i guess i don't need it***)
-        // dimensions of M, returns elems
-        static inline uint64_t dims(matrix M, uint *logside, uint *width, uint *height){
-            return matDims(M, width, height);
-        };
-        */
-        /* (*** i guess i don't need it***)
-            // accesses a cell
-            static inline uint access(matrix M, uint64_t row, uint64_t col){
-                return matAccess(M, row, col);
-            }
-        */
-
-        // (*** simple A + B from authors paper. Did it with GB ***)
         // (boolean) sum of two matrices, assumed to be of the same side
         static inline GrB_Matrix sum(GrB_Matrix A, GrB_Matrix B)
         {
-            GrB_Index nrows, ncols;
-            GrB_Matrix C;
-            GrB_Matrix_nrows(&nrows, A);
-            GrB_Matrix_ncols(&ncols, A);
-            GrB_Matrix_new(&C, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_eWiseAdd_BinaryOp(C, GrB_NULL, GrB_NULL, GrB_LOR, A, B, GrB_NULL);
-            return C;
-            // return matSum(A, B);
-        };
+            GrB_Index nrowsA, ncolsA, nrowsB, ncolsB, nvalsA, nvalsB;
+            GrB_Matrix_nrows(&nrowsA, A);
+            GrB_Matrix_ncols(&ncolsA, A);
+            GrB_Matrix_nvals(&nvalsA, A);
+            GrB_Matrix_nrows(&nrowsB, B);
+            GrB_Matrix_ncols(&ncolsB, B);
+            GrB_Matrix_nvals(&nvalsB, B);
 
-        //(*** this method is used in cases when we apply restriction optimizations. I hope i made it right ***)
+            GrB_Index nrows = std::max(nrowsA, nrowsB);
+            GrB_Index ncols = std::max(ncolsA, ncolsB);
+
+            GrB_Matrix A_pad, B_pad;
+            GrB_Matrix_new(&A_pad, GrB_BOOL, nrows, ncols);
+            GrB_Matrix_new(&B_pad, GrB_BOOL, nrows, ncols);
+
+            GrB_Matrix_assign(A_pad, NULL, NULL, A, GrB_ALL, nrowsA, GrB_ALL, ncolsA, NULL);
+            GrB_Matrix_assign(B_pad, NULL, NULL, B, GrB_ALL, nrowsB, GrB_ALL, ncolsB, NULL);
+
+            GrB_Matrix C;
+            GrB_Matrix_new(&C, GrB_BOOL, nrows, ncols);
+            GrB_Matrix_eWiseAdd_BinaryOp(C, NULL, NULL, GrB_LOR, A_pad, B_pad, NULL);
+
+            GrB_Matrix_free(&A_pad);
+            GrB_Matrix_free(&B_pad);
+
+            return C;
+        }
+
         // version with one row or one column, or both
         static inline GrB_Matrix sum1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint64_t col)
         {
@@ -180,39 +186,44 @@ namespace bm_baselinegb
             GrB_Matrix_new(&C, GrB_BOOL, nrows, ncols);
             if (row == full_side && col == full_side)
             {
-                // if we don't have both restrictions, just call common matrix addition
                 return sum(A, B);
             }
             else if (row != full_side && col != full_side)
             {
-                // if we got both restrictions, just do logical OR on two elements from A and B
-                bool elA, elB;
-                GrB_Matrix_extractElement_BOOL(&elA, A, row, col);
-                GrB_Matrix_extractElement_BOOL(&elB, B, row, col);
-                GrB_Matrix_setElement_BOOL(C, elA || elB, row, col);
+                bool elA = false, elB = false;
+                GrB_Matrix_extractElement_BOOL(&elA, A, row - 1, col - 1);
+                GrB_Matrix_extractElement_BOOL(&elB, B, row - 1, col - 1);
+                GrB_Matrix_setElement_BOOL(C, elA || elB, row - 1, col - 1);
                 return C;
             }
             else if (row == full_side && col != full_side)
             {
-                // get corresponding columns
                 GrB_Vector colA, colB, colC;
-                GrB_Col_extract(colA, GrB_NULL, GrB_NULL, A, GrB_ALL, row, col, GrB_NULL); // is "row" on the right place?
-                GrB_Col_extract(colB, GrB_NULL, GrB_NULL, B, GrB_ALL, row, col, GrB_NULL); // is "row" on the right place?
+                GrB_Vector_new(&colA, GrB_BOOL, nrows);
+                GrB_Vector_new(&colB, GrB_BOOL, nrows);
+                GrB_Vector_new(&colC, GrB_BOOL, nrows);
+                GrB_Col_extract(colA, NULL, NULL, A, GrB_ALL, nrows, col - 1, NULL);
+                GrB_Col_extract(colB, NULL, NULL, B, GrB_ALL, nrows, col - 1, NULL);
 
-                // A + B columns
-                GrB_Vector_eWiseAdd_BinaryOp(colC, GrB_NULL, GrB_NULL, GrB_LOR, colA, colB, GrB_NULL);
-
-                // save result column in C matrix
-                GrB_Col_assign(C, GrB_NULL, GrB_NULL, colC, GrB_ALL, row, col, GrB_NULL); // is "row" on the right place?
+                GrB_Vector_eWiseAdd_BinaryOp(colC, NULL, NULL, GrB_LOR, colA, colB, NULL);
+                GrB_Col_assign(C, NULL, NULL, colC, GrB_ALL, nrows, col - 1, NULL);
+                GrB_Vector_free(&colA);
+                GrB_Vector_free(&colB);
+                GrB_Vector_free(&colC);
                 return C;
             }
             else
+
             {
                 GrB_Matrix AT, BT, CT;
                 AT = transpose(A);
+
                 BT = transpose(B);
-                C = sum1(col, A, B, row);
+                C = sum1(col, AT, BT, row);
                 CT = transpose(C);
+                destroy(C);
+                destroy(AT);
+                destroy(BT);
                 return CT;
             }
         };
@@ -221,12 +232,15 @@ namespace bm_baselinegb
         // only rowA of A and colB of B are considered if not fullSide
         static inline GrB_Matrix mult(GrB_Matrix A, GrB_Matrix B)
         {
+            GrB_Index nvalsA, nvalsB;
+            GrB_Matrix_nvals(&nvalsA, A);
+            GrB_Matrix_nvals(&nvalsB, B);
             GrB_Index nrows, ncols;
             GrB_Matrix C;
             GrB_Matrix_nrows(&nrows, A);
             GrB_Matrix_ncols(&ncols, B);
             GrB_Matrix_new(&C, GrB_BOOL, nrows, ncols);
-            GrB_mxm(C, GrB_NULL, GrB_NULL, GrB_LOR_LAND_SEMIRING_BOOL, A, B, GrB_NULL); // i hope i chose right semiring :)
+            GrB_mxm(C, GrB_NULL, GrB_NULL, GrB_LOR_LAND_SEMIRING_BOOL, A, B, GrB_NULL);
             return C;
         };
 
@@ -240,9 +254,9 @@ namespace bm_baselinegb
             GrB_Matrix_nrows(&nrowsB, B);
             GrB_Matrix_ncols(&ncolsB, B);
             GrB_Matrix_new(&C, GrB_BOOL, nrowsA, ncolsB);
+
             if (row == full_side && col == full_side)
             {
-                // if we don't have both restrictions, just call common matrix multiplication
                 return mult(A, B);
             }
             else if (row != full_side && col != full_side)
@@ -252,19 +266,27 @@ namespace bm_baselinegb
                 GrB_Matrix_new(&tmpA, GrB_BOOL, nrowsA, ncolsA);
                 GrB_Matrix_new(&tmpB, GrB_BOOL, nrowsB, ncolsB);
 
-                // (B<c>)
+                // rxtract column c of B
                 GrB_Vector colB;
-                GrB_Col_extract(colB, GrB_NULL, GrB_NULL, B, GrB_ALL, row, col, GrB_NULL);
-                GrB_Col_assign(tmpB, GrB_NULL, GrB_NULL, colB, GrB_ALL, row, col, GrB_NULL);
+                GrB_Vector_new(&colB, GrB_BOOL, nrowsB);
+                GrB_Col_extract(colB, GrB_NULL, GrB_NULL, B, GrB_ALL, nrowsB, col - 1, GrB_NULL);
+                GrB_Col_assign(tmpB, GrB_NULL, GrB_NULL, colB, GrB_ALL, nrowsB, col - 1, GrB_NULL);
 
-                //(<r>A) need to double check correct usage of operations below
+                // extract row r of A as vector via transpose
                 GrB_Vector rowA;
+                GrB_Vector_new(&rowA, GrB_BOOL, ncolsA);
                 GrB_Matrix AT;
-                AT = transpose(A);
-                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, AT, GrB_ALL, col, row, GrB_NULL);
-                GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row, GrB_ALL, col, GrB_NULL);
+                GrB_Matrix_new(&AT, GrB_BOOL, ncolsA, nrowsA);
+                GrB_transpose(AT, GrB_NULL, GrB_NULL, A, GrB_NULL);
+                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, AT, GrB_ALL, ncolsA, row - 1, GrB_NULL);
+                GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row - 1, GrB_ALL, ncolsA, GrB_NULL);
 
                 C = mult(tmpA, tmpB);
+                destroy(tmpA);
+                destroy(tmpB);
+                GrB_Vector_free(&colB);
+                GrB_Vector_free(&rowA);
+                destroy(AT);
                 return C;
             }
             else if (row == full_side && col != full_side)
@@ -273,11 +295,14 @@ namespace bm_baselinegb
                 GrB_Matrix tmpB;
                 GrB_Matrix_new(&tmpB, GrB_BOOL, nrowsB, ncolsB);
 
-                // (B<c>)
                 GrB_Vector colB;
-                GrB_Col_extract(colB, GrB_NULL, GrB_NULL, B, GrB_ALL, row, col, GrB_NULL);
-                GrB_Col_assign(tmpB, GrB_NULL, GrB_NULL, colB, GrB_ALL, row, col, GrB_NULL);
+                GrB_Vector_new(&colB, GrB_BOOL, nrowsB);
+                GrB_Col_extract(colB, GrB_NULL, GrB_NULL, B, GrB_ALL, nrowsB, col - 1, GrB_NULL);
+                GrB_Col_assign(tmpB, GrB_NULL, GrB_NULL, colB, GrB_ALL, nrowsB, col - 1, GrB_NULL);
+
                 C = mult(A, tmpB);
+                destroy(tmpB);
+                GrB_Vector_free(&colB);
                 return C;
             }
             else
@@ -286,17 +311,21 @@ namespace bm_baselinegb
                 GrB_Matrix tmpA;
                 GrB_Matrix_new(&tmpA, GrB_BOOL, nrowsA, ncolsA);
 
-                //(<r>A) need to double check correct usage of operations below
                 GrB_Vector rowA;
+                GrB_Vector_new(&rowA, GrB_BOOL, ncolsA);
                 GrB_Matrix AT;
-                AT = transpose(A);
-                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, AT, GrB_ALL, col, row, GrB_NULL);
-                GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row, GrB_ALL, col, GrB_NULL);
+                GrB_Matrix_new(&AT, GrB_BOOL, ncolsA, nrowsA);
+                GrB_transpose(AT, GrB_NULL, GrB_NULL, A, GrB_NULL);
+                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, AT, GrB_ALL, ncolsA, row - 1, GrB_NULL);
+                GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row - 1, GrB_ALL, ncolsA, GrB_NULL);
 
                 C = mult(tmpA, B);
+                destroy(tmpA);
+                GrB_Vector_free(&rowA);
+                destroy(AT);
                 return C;
             }
-        };
+        }
 
         static inline GrB_Matrix pow(GrB_Matrix A, uint64_t row, uint64_t col)
         {
@@ -314,30 +343,25 @@ namespace bm_baselinegb
             GrB_Index prev_nvals = 0, result_nvals = 0;
             bool changed;
             do
-            {   
-                GrB_Index nvals;
-                GrB_Matrix_nvals(&nvals, result);
-                std::cout << nvals << std::endl;
+            {
 
                 GrB_Matrix_dup(&prev, result);
 
-   
                 GrB_Matrix temp;
                 GrB_Matrix_new(&temp, GrB_BOOL, nrows, ncols);
-                GrB_mxm(temp, GrB_NULL, GrB_NULL, GrB_LOR_LAND_SEMIRING_BOOL, result, A, GrB_NULL);
-                GrB_Matrix_eWiseAdd_BinaryOp(result, GrB_NULL, GrB_NULL, GrB_LOR, result, temp, GrB_NULL);
+                temp = mult1(row, result, A, col);
+
+                result = sum1(row, result, temp, col);
 
                 GrB_Matrix_free(&temp);
 
-   
                 GrB_Matrix_nvals(&prev_nvals, prev);
                 GrB_Matrix_nvals(&result_nvals, result);
-
 
                 changed = result_nvals != prev_nvals;
 
                 GrB_Matrix_free(&prev);
-                GrB_Matrix_dup(&prev, result); 
+                GrB_Matrix_dup(&prev, result);
 
             } while (changed);
 
@@ -345,51 +369,171 @@ namespace bm_baselinegb
             return result;
         }
 
-        // // transitive closure of a matrix, pos says if it's + rather than *
+        // transitive closure of a matrix, pos says if it's + rather than *
         static inline GrB_Matrix clos(GrB_Matrix A, uint pos)
         {
+
+            GrB_Index nrows, ncols;
             GrB_Matrix C = pow(A, full_side, full_side);
-            GrB_Index nvals;
-                GrB_Matrix_nvals(&nvals, C);
-                std::cout << nvals << std::endl;
 
             if (!pos)
             {
-                std::cout << "a" << std::endl;
-                GrB_Index nrows, ncols;
-                GrB_Matrix_nrows(&nrows, A);
-                GrB_Matrix_ncols(&ncols, A);
-                std::cout << nrows << ":::" << ncols << std::endl;
                 GrB_Matrix E = id(mmax(nrows, ncols));
                 GrB_Matrix summ;
                 GrB_Matrix_new(&summ, GrB_BOOL, nrows, ncols);
-                summ = sum(C,E);
+                summ = sum(C, E);
                 GrB_Matrix_free(&C);
                 GrB_Matrix_free(&E);
                 C = summ;
             }
-                GrB_Matrix_nvals(&nvals, C);
-                std::cout << nvals << std::endl;
-
             return C;
         }
 
-        // versions to choose one row or one column, or both
+        static inline GrB_Matrix clos_row(uint row, GrB_Matrix ID, GrB_Matrix A, uint pos, uint *coltest)
+        {
+            GrB_Matrix M, P, S, E;
+
+            GrB_Index elems;
+
+            GrB_Index nrowsA, ncolsA;
+            GrB_Matrix_nrows(&nrowsA, A);
+            GrB_Matrix_ncols(&ncolsA, A);
+            uint dim = mmax(nrowsA, ncolsA);
+            if (ID == NULL)
+            {
+                if (pos)
+                    E = empty(dim, dim);
+                else
+                {
+                    E = mat_one(dim, dim, row, row);
+                }
+                S = sum1(row, A, E, full_side);
+                destroy(E);
+            }
+            else
+            {
+                if (pos)
+                {
+
+                    S = mult1(row, ID, A, full_side);
+                    GrB_Matrix_nvals(&elems, S);
+                }
+
+                else
+                {
+                    E = empty(dim, dim);
+                    S = sum1(row, ID, E, full_side);
+                    destroy(E);
+                }
+            }
+            GrB_Matrix_nvals(&elems, S);
+            bool accessS;
+            if (coltest)
+                GrB_Matrix_extractElement_BOOL(&accessS, S, row, *coltest);
+            if (coltest && accessS)
+            {
+                destroy(S);
+                *coltest = 1;
+                return NULL;
+            }
+            P = mult(S, A);
+            M = S;
+            S = sum(P, S);
+
+            GrB_Index elems_new;
+            GrB_Matrix_nvals(&elems_new, S);
+
+            while (elems_new != elems)
+            {
+                if (coltest)
+                    GrB_Matrix_extractElement_BOOL(&accessS, S, row, *coltest);
+                if (coltest && accessS)
+                {
+                    destroy(S);
+                    destroy(P);
+                    *coltest = 1;
+                    return NULL;
+                }
+                elems = elems_new;
+                M = P;
+                P = mult(P, A);
+                destroy(M);
+                M = S;
+                S = sum(S, P);
+                destroy(M);
+                GrB_Matrix_nvals(&elems_new, S);
+            }
+            destroy(P);
+            if (coltest)
+            {
+                destroy(S);
+                *coltest = 0;
+                return NULL;
+            }
+            return S;
+        }
+
         static inline GrB_Matrix clos1(uint64_t row, GrB_Matrix A, uint pos, uint64_t col)
         {
-            GrB_Matrix C;
-            C = pow(A, row, col);
-            if (!pos)
-            { // (*** Kleene Star ***)
-                GrB_Matrix E;
-                GrB_Index nrows, ncols;
-                GrB_Matrix_nrows(&nrows, A);
-                GrB_Matrix_ncols(&ncols, A);
-                E = id(nrows);
-                C = sum1(row, E, C, col); // can i pass C as argument hmmmmmm...
+            GrB_Index nrow, ncol;
+
+            GrB_Index nrowsA, ncolsA;
+            GrB_Matrix_nrows(&nrowsA, A);
+            GrB_Matrix_ncols(&ncolsA, A);
+            uint side = mmax(nrowsA, ncolsA);
+            uint test;
+            GrB_Matrix M;
+            GrB_Matrix At;
+
+            if (row == full_side)
+            {
+                if (col == full_side)
+                    return clos(A, pos);
+                else
+                {
+                    GrB_Index n;
+                    At = transpose(A);
+                    M = clos_row(col, NULL, At, pos, NULL);
+                    M = transpose(M);
+                    return M;
+                }
             }
-            return C;
-        };
+            else
+            {
+                if (col == full_side)
+                    return clos_row(row, NULL, A, pos, NULL);
+            }
+
+            GrB_Vector row_vec;
+            GrB_Vector_new(&row_vec, GrB_BOOL, side);
+            GrB_Col_extract(row_vec, NULL, NULL, A, GrB_ALL, side, row - 1, NULL);
+
+            GrB_Vector_nvals(&ncol, row_vec);
+
+            GrB_Vector col_vec;
+            GrB_Vector_new(&col_vec, GrB_BOOL, side);
+            GrB_Matrix AT;
+            AT = transpose(A);
+            GrB_Col_extract(col_vec, NULL, NULL, AT, GrB_ALL, side, col - 1, NULL);
+
+            if (ncol < nrow)
+            {
+                test = row;
+                At = transpose(A);
+                clos_row(col, NULL, At, pos, &test);
+            }
+            else
+            {
+                test = col;
+                clos_row(row, NULL, A, pos, &test);
+            }
+            if (test)
+            {
+                return mat_one(side, side, row, col);
+            }
+            else
+                return empty(side, side);
+        }
 
         // computes [row] A B* [col] (pos=0) or [row] A B+ [col] (pos=1)
         static inline GrB_Matrix mult_clos1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint pos, uint64_t col)
@@ -399,77 +543,56 @@ namespace bm_baselinegb
             GrB_Matrix_ncols(&ncolsA, A);
             GrB_Matrix_nrows(&nrowsB, B);
             GrB_Matrix_ncols(&ncolsB, B);
+            uint64_t side = mmax(nrowsA, ncolsA);
 
-            if (row == full_side && col == full_side)
+            if (row == full_side)
             {
-                GrB_Matrix M1, M;
-                M1 = clos(B, pos);
-                M = mult(A, M1);
-                GrB_Matrix_free(&M1);
-                return M;
-            }
-            else if (row != full_side && col != full_side)
-            {
-                GrB_Matrix Bclos_col = clos1(full_side, B, pos, col);
-                GrB_Matrix result = mult1(row, A, Bclos_col, full_side);
-                GrB_Matrix_free(&Bclos_col);
-                return result;
-            }
-            else if (row == full_side && col != full_side)
-            {
-                GrB_Matrix Bclos_col = clos1(full_side, B, pos, col);
-                GrB_Matrix result = mult(A, Bclos_col);
-                GrB_Matrix_free(&Bclos_col);
-                return result;
+                if (col == full_side)
+                {
+                    GrB_Matrix M1 = clos(B, pos);
+                    GrB_Matrix M = mult(A, M1);
+                    GrB_Matrix_free(&M1);
+                    return M;
+                }
+                else
+                {
+
+                    GrB_Matrix M1 = clos1(full_side, B, pos, col);
+                    GrB_Matrix M = mult(A, M1);
+                    GrB_Matrix_free(&M1);
+                    return M;
+                }
             }
             else
             {
-                GrB_Matrix Bclos = clos(B, pos);
-                GrB_Matrix result = mult1(row, A, Bclos, full_side);
-                GrB_Matrix_free(&Bclos);
-                return result;
+                if (col == full_side)
+                {
+                    return clos_row(row, A, B, pos, NULL);
+                }
             }
-        };
+            uint32_t test = col;
+            clos_row(row, A, B, pos, &test);
+            if (test)
+                return mat_one(side, side, row, col);
+            return empty(side, side);
+        }
 
-        //     // computes [row] A* B [col] (pos=0) or [row] A+ B [col] (pos=1)
+        // computes [row] A* B [col] (pos=0) or [row] A+ B [col] (pos=1)
         static inline GrB_Matrix clos_mult1(uint64_t row, GrB_Matrix A, uint pos, GrB_Matrix B, uint64_t col)
         {
-            GrB_Index nrowsA, ncolsA, nrowsB, ncolsB;
-            GrB_Matrix_nrows(&nrowsA, A);
-            GrB_Matrix_ncols(&ncolsA, A);
-            GrB_Matrix_nrows(&nrowsB, B);
-            GrB_Matrix_ncols(&ncolsB, B);
+            GrB_Matrix At, Bt;
+            At = transpose(A);
+            Bt = transpose(B);
 
-            if (row == full_side && col == full_side)
-            {
-                GrB_Matrix M1, M;
-                M1 = clos(A, pos);
-                M = mult(M1, B);
-                GrB_Matrix_free(&M1);
-                return M;
-            }
-            else if (row != full_side && col != full_side)
-            {
-                GrB_Matrix Aclos_row = clos1(row, A, pos, full_side);
-                GrB_Matrix result = mult1(full_side, Aclos_row, B, col);
-                GrB_Matrix_free(&Aclos_row);
-                return result;
-            }
-            else if (row == full_side && col != full_side)
-            {
-                GrB_Matrix Aclos = clos(A, pos);
-                GrB_Matrix result = mult1(full_side, Aclos, B, col);
-                GrB_Matrix_free(&Aclos);
-                return result;
-            }
-            else
-            {
-                GrB_Matrix Aclos_row = clos1(row, A, pos, full_side);
-                GrB_Matrix result = mult(Aclos_row, B);
-                GrB_Matrix_free(&Aclos_row);
-                return result;
-            }
-        };
+            GrB_Matrix M = mult_clos1(col, Bt, At, pos, row);
+            GrB_Matrix M_transposed = transpose(M);
+
+            GrB_Matrix_free(&At);
+            GrB_Matrix_free(&Bt);
+            GrB_Matrix_free(&M);
+
+            return M_transposed;
+        }
     };
 }
 

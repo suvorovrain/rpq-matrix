@@ -17,9 +17,9 @@
 #include <rpq_solver.hpp>
 
 
-#define N 958844164
-#define S 5420 // 1 to 5419
-#define V 296008192 // 1 to...
+// #define N 958844164
+// #define S 5420 // 1 to 5419
+// #define V 296008192 // 1 to...
 
 
 int main(int argc, char **argv) {

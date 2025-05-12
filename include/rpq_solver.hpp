@@ -229,7 +229,7 @@ namespace rpq
                     matrix tmp = wrapper::clos(A, 0);
                     if (ll.front().is_tmp)
                         wrapper::destroy(ll.front().m);
-                    // std::cout << "STAR : " << ll.front() << std::endl;
+                    //  std::cout << "STAR : " << ll.front() << std::endl;
                     res.insert(res.begin(), data_type{tmp, false, true, false});
 #if VERBOSE
                     std::cout << "[STAR]: matClos" << std::endl;
@@ -284,7 +284,6 @@ namespace rpq
             }
             }
         }
-        // end of first traversal
                 void traversal_col_fixed(RpqTree *rpqTree, Tree *node, int parentType, int col, list_type &res,
                                          bool skip_closure = false)
                 {
@@ -1275,8 +1274,11 @@ namespace rpq
                 
                 std::cout <<  std::endl << file << std::endl;   
                 m_matrices[i] = wrapper::load(f);
-                std::cout << "DEBUG: after load" << std::endl;   
                 fclose(f);
+                // GrB_Index nrows, ncols;
+                // GrB_Matrix_nrows(&nrows, m_matrices[i]);
+                // GrB_Matrix_ncols(&ncols, m_matrices[i]);
+                // std::cout <<" " << nrows <<" " << ncols  << " matrix params" << std::endl;
                 space += wrapper::space(m_matrices[i]);
             }
             printf(" done... %li total words (%0.2f bpt)\n", space, space * (ww / 8) / (float)n_triples);
