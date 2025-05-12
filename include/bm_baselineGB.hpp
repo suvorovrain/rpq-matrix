@@ -151,27 +151,25 @@ namespace bm_baselinegb
             GrB_Index nrowsA, ncolsA, nrowsB, ncolsB, nvalsA, nvalsB;
             GrB_Matrix_nrows(&nrowsA, A);
             GrB_Matrix_ncols(&ncolsA, A);
-            GrB_Matrix_nvals(&nvalsA, A);
             GrB_Matrix_nrows(&nrowsB, B);
             GrB_Matrix_ncols(&ncolsB, B);
-            GrB_Matrix_nvals(&nvalsB, B);
 
             GrB_Index nrows = std::max(nrowsA, nrowsB);
             GrB_Index ncols = std::max(ncolsA, ncolsB);
 
-            GrB_Matrix A_pad, B_pad;
-            GrB_Matrix_new(&A_pad, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_new(&B_pad, GrB_BOOL, nrows, ncols);
+            GrB_Matrix Atmp, Btmp;
+            GrB_Matrix_new(&Atmp, GrB_BOOL, nrows, ncols);
+            GrB_Matrix_new(&Btmp, GrB_BOOL, nrows, ncols);
 
-            GrB_Matrix_assign(A_pad, NULL, NULL, A, GrB_ALL, nrowsA, GrB_ALL, ncolsA, NULL);
-            GrB_Matrix_assign(B_pad, NULL, NULL, B, GrB_ALL, nrowsB, GrB_ALL, ncolsB, NULL);
+            GrB_Matrix_assign(Atmp, NULL, NULL, A, GrB_ALL, nrowsA, GrB_ALL, ncolsA, NULL);
+            GrB_Matrix_assign(Btmp, NULL, NULL, B, GrB_ALL, nrowsB, GrB_ALL, ncolsB, NULL);
 
             GrB_Matrix C;
             GrB_Matrix_new(&C, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_eWiseAdd_BinaryOp(C, NULL, NULL, GrB_LOR, A_pad, B_pad, NULL);
+            GrB_Matrix_eWiseAdd_BinaryOp(C, NULL, NULL, GrB_LOR, Atmp, Btmp, NULL);
 
-            GrB_Matrix_free(&A_pad);
-            GrB_Matrix_free(&B_pad);
+            GrB_Matrix_free(&Atmp);
+            GrB_Matrix_free(&Btmp);
 
             return C;
         }
@@ -353,14 +351,14 @@ namespace bm_baselinegb
 
                 result = sum1(row, result, temp, col);
 
-                GrB_Matrix_free(&temp);
+                destroy(temp);
 
                 GrB_Matrix_nvals(&prev_nvals, prev);
                 GrB_Matrix_nvals(&result_nvals, result);
 
                 changed = result_nvals != prev_nvals;
 
-                GrB_Matrix_free(&prev);
+                destroy(prev);
                 GrB_Matrix_dup(&prev, result);
 
             } while (changed);
@@ -382,8 +380,8 @@ namespace bm_baselinegb
                 GrB_Matrix summ;
                 GrB_Matrix_new(&summ, GrB_BOOL, nrows, ncols);
                 summ = sum(C, E);
-                GrB_Matrix_free(&C);
-                GrB_Matrix_free(&E);
+                free(C);
+                free(E);
                 C = summ;
             }
             return C;
