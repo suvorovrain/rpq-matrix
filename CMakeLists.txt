@@ -88,6 +88,3 @@ target_link_libraries(create_pairs matrix_gn )
 
 # add_executable(baseline_build src/baseline_build.cpp)
 # target_link_libraries(baseline_build baseline_gn)
-
-add_executable(baselineGB_build src/baselineGB_build.cpp)
-target_link_libraries(baselineGB_build baseline_gn graphblas lagraph)
