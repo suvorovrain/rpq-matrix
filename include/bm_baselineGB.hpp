@@ -52,16 +52,19 @@ namespace bm_baselinegb
         // creates an identity matrix
         static inline GrB_Matrix id(uint64_t side)
         {
+            printf("unreachable\n");
+            exit(1);
             GrB_Matrix E;
             GrB_Matrix_new(&E, GrB_BOOL, side, side);
-            GrB_Index indices[side];
-            bool values[side];
+          
             for (GrB_Index i = 0; i < side; i++)
             {
-                indices[i] = i;
-                values[i] = true;
+                GrB_Matrix_setElement_BOOL(E, true, i, i);
             }
-            GrB_Matrix_build_BOOL(E, indices, indices, values, side, GrB_FIRST_BOOL);
+
+            GrB_Index nvals;
+            GrB_Matrix_nvals(&nvals, E);
+            printf("%d E\n", nvals);
             return E;
         };
 
@@ -107,36 +110,20 @@ namespace bm_baselinegb
         {
             GrB_Matrix A = NULL;
             GrB_Info info = LAGraph_MMRead(&A, file, NULL);
-            GrB_Matrix_wait(A, GrB_COMPLETE);
+
             if (info != GrB_SUCCESS)
             {
                 std::cerr << "Error occured while reading the matrix: " << info << std::endl;
                 return NULL;
             }
-
+            GrB_Matrix_wait(A, GrB_COMPLETE);
             GrB_Index nrows, ncols;
             GrB_Matrix_nrows(&nrows, A);
             GrB_Matrix_ncols(&ncols, A);
 
-            GrB_Matrix B = NULL;
-            GrB_Matrix_new(&B, GrB_BOOL, nrows + 1, ncols + 1);
-
-            for (GrB_Index i = 0; i < nrows; ++i)
-            {
-                for (GrB_Index j = 0; j < ncols; ++j)
-                {
-                    bool val;
-                    if (GrB_Matrix_extractElement_BOOL(&val, A, i, j) == GrB_SUCCESS)
-                    {
-                        GrB_Matrix_setElement_BOOL(B, val, i, j);
-                    }
-                }
-            }
-
-            GrB_Matrix_free(&A);
-            return B;
+            GrB_Matrix_resize(A, nrows + 1, ncols + 1);
+            return A;
         }
-
         // space of the matrix, in w-bit words
         static inline uint64_t space(GrB_Matrix M)
         {
@@ -148,28 +135,15 @@ namespace bm_baselinegb
         // (boolean) sum of two matrices, assumed to be of the same side
         static inline GrB_Matrix sum(GrB_Matrix A, GrB_Matrix B)
         {
-            GrB_Index nrowsA, ncolsA, nrowsB, ncolsB, nvalsA, nvalsB;
-            GrB_Matrix_nrows(&nrowsA, A);
-            GrB_Matrix_ncols(&ncolsA, A);
-            GrB_Matrix_nrows(&nrowsB, B);
-            GrB_Matrix_ncols(&ncolsB, B);
-
-            GrB_Index nrows = std::max(nrowsA, nrowsB);
-            GrB_Index ncols = std::max(ncolsA, ncolsB);
-
-            GrB_Matrix Atmp, Btmp;
-            GrB_Matrix_new(&Atmp, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_new(&Btmp, GrB_BOOL, nrows, ncols);
-
-            GrB_Matrix_assign(Atmp, NULL, NULL, A, GrB_ALL, nrowsA, GrB_ALL, ncolsA, NULL);
-            GrB_Matrix_assign(Btmp, NULL, NULL, B, GrB_ALL, nrowsB, GrB_ALL, ncolsB, NULL);
-
             GrB_Matrix C;
-            GrB_Matrix_new(&C, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_eWiseAdd_BinaryOp(C, NULL, NULL, GrB_LOR, Atmp, Btmp, NULL);
+            GrB_Index nrows, ncols;
 
-            GrB_Matrix_free(&Atmp);
-            GrB_Matrix_free(&Btmp);
+            GrB_Matrix_nrows(&nrows, A);
+            GrB_Matrix_ncols(&ncols, A);
+
+            GrB_Matrix_new(&C, GrB_BOOL, nrows, ncols);
+
+            GrB_Matrix_eWiseAdd_BinaryOp(C, NULL, NULL, GrB_LOR, A, B, NULL);
 
             return C;
         }
@@ -273,10 +247,7 @@ namespace bm_baselinegb
                 // extract row r of A as vector via transpose
                 GrB_Vector rowA;
                 GrB_Vector_new(&rowA, GrB_BOOL, ncolsA);
-                GrB_Matrix AT;
-                GrB_Matrix_new(&AT, GrB_BOOL, ncolsA, nrowsA);
-                GrB_transpose(AT, GrB_NULL, GrB_NULL, A, GrB_NULL);
-                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, AT, GrB_ALL, ncolsA, row - 1, GrB_NULL);
+                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, A, GrB_ALL, ncolsA, row - 1, GrB_DESC_T0);
                 GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row - 1, GrB_ALL, ncolsA, GrB_NULL);
 
                 C = mult(tmpA, tmpB);
@@ -284,7 +255,7 @@ namespace bm_baselinegb
                 destroy(tmpB);
                 GrB_Vector_free(&colB);
                 GrB_Vector_free(&rowA);
-                destroy(AT);
+                // destroy(AT);
                 return C;
             }
             else if (row == full_side && col != full_side)
@@ -311,21 +282,18 @@ namespace bm_baselinegb
 
                 GrB_Vector rowA;
                 GrB_Vector_new(&rowA, GrB_BOOL, ncolsA);
-                GrB_Matrix AT;
-                GrB_Matrix_new(&AT, GrB_BOOL, ncolsA, nrowsA);
-                GrB_transpose(AT, GrB_NULL, GrB_NULL, A, GrB_NULL);
-                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, AT, GrB_ALL, ncolsA, row - 1, GrB_NULL);
+                GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, A, GrB_ALL, ncolsA, row - 1, GrB_DESC_T0);
                 GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row - 1, GrB_ALL, ncolsA, GrB_NULL);
 
                 C = mult(tmpA, B);
                 destroy(tmpA);
                 GrB_Vector_free(&rowA);
-                destroy(AT);
+                // destroy(AT);
                 return C;
             }
         }
 
-        static inline GrB_Matrix pow(GrB_Matrix A, uint64_t row, uint64_t col)
+        static inline GrB_Matrix pow(GrB_Matrix A)
         {
             GrB_Index nrows, ncols;
             GrB_Matrix_nrows(&nrows, A);
@@ -343,26 +311,22 @@ namespace bm_baselinegb
             do
             {
 
-                GrB_Matrix_dup(&prev, result);
-
                 GrB_Matrix temp;
                 GrB_Matrix_new(&temp, GrB_BOOL, nrows, ncols);
-                temp = mult1(row, result, A, col);
 
-                result = sum1(row, result, temp, col);
+                temp = mult(result, A);
+
+                result = sum(result, temp);
 
                 destroy(temp);
 
                 GrB_Matrix_nvals(&prev_nvals, prev);
                 GrB_Matrix_nvals(&result_nvals, result);
-
                 changed = result_nvals != prev_nvals;
 
-                destroy(prev);
                 GrB_Matrix_dup(&prev, result);
-
             } while (changed);
-
+            destroy(prev);
             GrB_Matrix_free(&prev);
             return result;
         }
@@ -370,20 +334,25 @@ namespace bm_baselinegb
         // transitive closure of a matrix, pos says if it's + rather than *
         static inline GrB_Matrix clos(GrB_Matrix A, uint pos)
         {
-
+            // std::cout << "unreachable" << std::endl;
+            // exit(1);
             GrB_Index nrows, ncols;
-            GrB_Matrix C = pow(A, full_side, full_side);
+            GrB_Matrix_nrows(&nrows, A);
+            GrB_Matrix_ncols(&ncols, A);
+            GrB_Matrix C = pow(A);
 
             if (!pos)
             {
-                GrB_Matrix E = id(mmax(nrows, ncols));
-                GrB_Matrix summ;
-                GrB_Matrix_new(&summ, GrB_BOOL, nrows, ncols);
-                summ = sum(C, E);
-                free(C);
-                free(E);
-                C = summ;
+                GrB_Index dim = (nrows < ncols) ? ncols : nrows;
+                for (GrB_Index i = 0; i < dim; i++)
+                {
+                    if (i < nrows && i < ncols)
+                    {
+                        GrB_Matrix_setElement_BOOL(C, 1, i, i);
+                    }
+                }
             }
+         
             return C;
         }
 
