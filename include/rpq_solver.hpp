@@ -1009,15 +1009,17 @@ namespace rpq {
             uint64_t space = 0;
             uint i;
             FILE *f;
-            printf ("Reading %i matrices...", n_preds); fflush(stdout);
+            // printf ("Reading %i matrices...", n_preds); fflush(stdout);
             for (i=1;i<m_matrices.size();i++) {
                 std::string file = file_name(i, index);
                 f = fopen(file.c_str(), "r");
-                m_matrices[i] = wrapper::load(f);
+                // std::cout << file << std::endl;    
+                m_matrices[i] = wrapper::load(f);   
                 fclose(f);
+                // std::cout << m_matrices[i]->height<<" " <<  m_matrices[i]->width  <<" "<< "matrix params" << std::endl;
                 space += wrapper::space(m_matrices[i]);
             }
-            printf (" done... %li total words (%0.2f bpt)\n",space,space*(w/8)/(float)n_triples);
+            // printf (" done... %li total words (%0.2f bpt)\n",space,space*(w/8)/(float)n_triples);
 
             std::ifstream ifs_SO(dataset + ".SO", std::ifstream::in);
             std::ifstream ifs_P(dataset + ".P", std::ifstream::in);
@@ -1028,7 +1030,7 @@ namespace rpq {
             uint64_t id;
             std::string s_aux, data;
 
-            std::cout << "Reading mapping..." << std::flush;
+            // std::cout << "Reading mapping..." << std::flush;
             while (std::getline(ifs_SO, data)) {
                 space = data.find(' ');
                 id = std::stoull(data.substr(0, space));
@@ -1042,7 +1044,7 @@ namespace rpq {
                 s_aux = data.substr(space + 1);
                 m_map_P[s_aux] = id;
             }
-            std::cout << " done." << std::endl;
+            // std::cout << " done." << std::endl;
 
             /*double_t bits = std::ceil(std::log2(N)) * (SIZE-1);
             for(uint64_t j = 1; j < m_matrices.size(); ++j){
@@ -1056,8 +1058,9 @@ namespace rpq {
             std::cout << bpt << " (bpt)" << std::endl;*/
 
         }
-
+        
         data_type solve_var_to_var(std::string &query, bool &rem){
+            // std::cout << "debug: eval start" << std::endl;
             list_type res;
             RpqTree rpqTree(query, map_P, m_matrices.size());
             traversal(&rpqTree, rpqTree.root(), ROOT, res);

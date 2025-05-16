@@ -243,6 +243,10 @@ matrix matLoad (FILE *file)
     fread(&M->elems,sizeof(uint64_t),1,file);
     fread(&M->width,sizeof(uint),1,file);
     fread(&M->height,sizeof(uint),1,file);
+    // printf("DEBUG: height and width in matLoad: %dx%d\n",M->width, M->height);
+    // M->height = M->height-1;
+    // M->width= M->width-1;
+    // printf("DEBUG: height and width in matLoad: %dx%d\n",M->width, M->height);
     if (M->elems == 0)
     { M->rowids = M->colids = NULL;
         M->rowpos = M->colpos = NULL;
@@ -269,6 +273,8 @@ matrix matLoad (FILE *file)
         M->rowsbycol = (uint*)myalloc(M->elems*sizeof(uint));
         fread(M->rowsbycol,sizeof(uint),M->elems,file);
     }
+    // printf("DEBUG: nrows and ncols in matLoad: %dx%d\n",M->nrows, M->ncols);
+
     return M;
 }
 
@@ -433,6 +439,7 @@ matrix matSum (matrix A, matrix B)
     uint p,pa,pb,na,nb,c;
     uint64_t *posA,*posB;
     uint bitsA,bitsB,bitsM;
+    // printf("DEBUG: A: %dx%d %d. B: %dx%d %d\n", A->height,A->width, A->elems,B->height,B->width, B->elems);
 
     if ((A->elems == 0) || (B->elems == 0))
     { if (A->elems == 0) M = matCopy(B); else M = matCopy(A);
@@ -537,7 +544,7 @@ matrix matSum1 (uint row, matrix A, matrix B, uint col)
     uint64_t pa,pb;
     uint na,nb;
     uint *data;
-
+    // printf("DEBUG: row :%d\n",row);
     if (row == fullSide)
         if (col == fullSide)
             return matSum(A,B);
@@ -587,8 +594,26 @@ matrix matSum1 (uint row, matrix A, matrix B, uint col)
             return M;
         }
     else if (col == fullSide) // sorry for this, I couldn't resist
-    { At = matTranspose(A); Bt = matTranspose(B);
+    { 
+            // printf("DEBUG: row %d in A: \n",  row );
+            //     for (uint j = 0; j < A->width; ++j)
+            //     {
+            //         uint val = matAccess(A, row,j);
+            //         if (val > 0)
+            //             printf("  A(%d,%d)= %d\n ",row,j,val );
+            //     }
+
+            // printf("DEBUG: row %d in B: \n",  row );
+            //     for (uint j = 0; j < B->width; ++j)
+            //     {
+            //         uint val = matAccess(B, row,j);
+            //         if (val > 0)
+            //             printf("  B(%d,%d)= %d\n ",row,j,val );
+            //     }
+        
+        At = matTranspose(A); Bt = matTranspose(B);
         M = matSum1(col,&At,&Bt,row);
+        // printf("DEBUG: M elems in sum1: %d\n", M->elems);
         *M = matTranspose(M);
         return M;
     }
@@ -708,6 +733,8 @@ matrix matMult (matrix A, matrix B)
         return matEmpty(A->height, B->width);
     }
 #endif
+    // printf("DEBUG: nvals of A in mult: %d\n",A->elems);
+    // printf("DEBUG: nvals of B in mult: %d\n",B->elems);
 
     ttask *task;
     uint c,i,j,m,p,pr,pc;
@@ -971,6 +998,8 @@ matrix matMult1 (uint row, matrix A, matrix B, uint col)
     struct s_matrix At,Bt;
     uint bitsA,bitsB;
     uint64_t posA,posB;
+    // printf("DEBUG: nvals of A in mult1: %d\n",A->elems);
+    // printf("DEBUG: nvals of B in mult1: %d\n",B->elems);
 
     if ((A->elems == 0) || (B->elems == 0))
         return matEmpty(A->height,B->width);
@@ -986,6 +1015,8 @@ matrix matMult1 (uint row, matrix A, matrix B, uint col)
     }
     if (row == fullSide)
     { At = matTranspose(A); Bt = matTranspose(B);
+    //  printf("DEBUG: nvals of A in mult1: %d\n",A->elems);
+    // printf("DEBUG: nvals of B in mult1: %d\n",B->elems);
         M = matMult1R(col,&Bt,&At);
         *M = matTranspose(M);
         return M;
@@ -995,18 +1026,18 @@ matrix matMult1 (uint row, matrix A, matrix B, uint col)
 
 // transitive closure of a matrix, pos says if it's + rather than *
 
-matrix matClos0 (matrix A, uint pos)
+matrix matClos(matrix A, uint pos)
 
 { matrix M,P,S,Id;
     uint elems;
 
-    elems = A->elems;
-    printf("%d:::%d\n",A->height,A->width);
+    // elems = A->elems;
+    // printf("%d:::%d\n",A->height,A->width);
     P = matMult (A,A);
     S = matSum (A,P);
     while (S->elems != elems)
     { elems = S->elems;
-        printf("%d\n",S->elems);
+
         matDestroy(P);
         P = matMult(S,S);
         M = matSum(S,P);
@@ -1014,13 +1045,14 @@ matrix matClos0 (matrix A, uint pos)
         S = M;
     }
     matDestroy(P);
-    printf("%d\n",S->elems);
+    // printf("%d\n",S->elems);
     if (!pos)
     { Id = matId(mmax(A->width,A->height));
+    // printf("DEBUG: nvals of id in clos: %d\n",Id->elems);
         M = S; S = matSum(S,Id); matDestroy(M);
         matDestroy(Id);
     }
-    printf("%d\n",S->elems);
+    // printf("%d\n",S->elems);
     return S;
 }
 
@@ -1041,17 +1073,21 @@ static matrix matClosRow (uint row, matrix I, matrix A, uint pos, uint *coltest)
     if (I == NULL)
     { if (pos) E = matEmpty(dim,dim);
         else E = matOne(dim,dim,row,row);
+        // printf("DEBUG: A elems in closrow: %d\n", A->elems);
+        // printf("DEBUG: E elems in closrow: %d\n", E->elems);
         S = matSum1 (row,A,E,fullSide);
         matDestroy(E);
     }
     else
-    { if (pos) S = matMult1(row,I,A,fullSide);
+    { if (pos){ S = matMult1(row,I,A,fullSide);}
+    // printf("DEBUG:2  S elems in closrow: %d\n", S->elems);
         else { E = matEmpty(dim,dim);
             S = matSum1(row,I,E,fullSide);
             matDestroy(E);
         }
     }
     elems = S->elems;
+    // printf("DEBUG:3 S elems in closrow: %d\n", elems);
     if (coltest && matAccess(S,row,*coltest))
     { matDestroy(S); *coltest = 1; return NULL; }
     P = matMult (S,A);
@@ -1083,6 +1119,7 @@ matrix matClos1 (uint row, matrix A, uint pos, uint col)
         else
         { At = matTranspose(A);
             M = matClosRow(col,NULL,&At,pos,NULL);
+            // printf("DEBUG: M elems after closrow: %d\n", M->elems);
             *M = matTranspose(M);
             return M;
         }
@@ -1123,13 +1160,17 @@ matrix matMultClos1 (uint row, matrix A, matrix B, uint pos, uint col)
         }
         else // it's much better to start with restricted B
         { M1 = matClos1(fullSide,B,pos,col);
+            
             M = matMult(A,M1);
             matDestroy(M1);
             return M;
         }
     }
     else
-    { if (col == fullSide) return matClosRow(row,A,B,pos,NULL);
+    { if (col == fullSide) {
+        // printf("DEBUG: nvals of A in mult_clos1: %d\n",A->elems);
+        // printf("DEBUG: nvals of B in mult_clos1: %d\n",B->elems);
+        return matClosRow(row,A,B,pos,NULL);}
     }
     // both row and col
     test = col;
@@ -1144,6 +1185,8 @@ matrix matClosMult1 (uint row, matrix A, uint pos, matrix B, uint col)
 
 { matrix M;
     struct s_matrix At,Bt;
+    // printf("DEBUG: nvals of A in clos_mult1: %d\n",A->elems);
+    // printf("DEBUG: nvals of B in clos_mult1: %d\n",B->elems);
     At = matTranspose(A);
     Bt = matTranspose(B);
     M = matMultClos1(col,&Bt,&At,pos,row);
@@ -1500,7 +1543,7 @@ static matrix strongly (matrix M)
     return A;
 }
 
-matrix matClos (matrix A, uint pos)
+matrix matClos0 (matrix A, uint pos)
 
 { matrix M,S,Id;
 

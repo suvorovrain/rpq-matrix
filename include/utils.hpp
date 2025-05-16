@@ -183,7 +183,7 @@ namespace rpq {
         typedef typename solver_type::s_matrix s_matrix;
 
         solver_type solver(dataset, index, n_preds, n_triples);
-
+        // std::cout << "debug: after solver" << std::endl;
         std::string query, line, l2;
         uint64_t i = 1;
         uint64_t elems;
@@ -200,7 +200,7 @@ namespace rpq {
                 std::cout << i << ";0;0" << std::endl;
             }else{
                 query = rpq::utils::remove_unnecessary_parentheses(query);
-                std::cerr << query << std::endl;
+                // std::cerr << query << std::endl;
 
                 auto t1 = std::chrono::high_resolution_clock::now();
                 wrapper_type::time_begin();
@@ -220,11 +220,11 @@ namespace rpq {
                     s_matrix m = wrapper_type::transpose(res.m);
                     auto t2 = std::chrono::high_resolution_clock::now();
                     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count();
-                    std::cout << i << ";" << m.elems << ";" <<t << std::endl;
+                    std::cout << i << ";" << m.elems << ";" << t << std::endl;
                 }else{
                     auto t2 = std::chrono::high_resolution_clock::now();
                     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count();
-                    std::cout << i << ";" << res.m->elems << ";" << t << std::endl;
+                    std::cout  << i << ";" << res.m->elems << ";" << t << std::endl;;
                     if(res.is_tmp) wrapper_type::destroy(res.m);
                 }
             }
