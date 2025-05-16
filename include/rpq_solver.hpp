@@ -1261,7 +1261,7 @@ namespace rpq
             uint64_t space = 0;
             uint i;
             FILE *f;
-            printf("Reading %i matrices...", n_preds);
+            // printf("Reading %i matrices...", n_preds);
             fflush(stdout);
             // here i need to read matrices via lagraph
             for (i = 1; i < m_matrices.size(); i++)
@@ -1272,7 +1272,7 @@ namespace rpq
                     printf("null file");
                 }
                 
-                std::cout <<  std::endl << file << std::endl;   
+                // std::cout <<  std::endl << file << std::endl;   
                 m_matrices[i] = wrapper::load(f);
                 fclose(f);
                 // GrB_Index nrows, ncols;
@@ -1281,7 +1281,7 @@ namespace rpq
                 // std::cout <<" " << nrows <<" " << ncols  << " matrix params" << std::endl;
                 space += wrapper::space(m_matrices[i]);
             }
-            printf(" done... %li total words (%0.2f bpt)\n", space, space * (ww / 8) / (float)n_triples);
+            // printf(" done... %li total words (%0.2f bpt)\n", space, space * (ww / 8) / (float)n_triples);
 
             std::ifstream ifs_SO(dataset + ".SO", std::ifstream::in);
             std::ifstream ifs_P(dataset + ".P", std::ifstream::in);
@@ -1291,7 +1291,7 @@ namespace rpq
             uint64_t id;
             std::string s_aux, data;
 
-            std::cout << "Reading mapping..." << std::flush;
+            // std::cout << "Reading mapping..." << std::flush;
             while (std::getline(ifs_SO, data))
             {
                 space = data.find(' ');
@@ -1307,7 +1307,7 @@ namespace rpq
                 s_aux = data.substr(space + 1);
                 m_map_P[s_aux] = id;
             }
-            std::cout << " done." << std::endl;
+            // std::cout << " done." << std::endl;
 
             /*double_t bits = std::ceil(std::log2(N)) * (SIZE-1);
             for(uint64_t j = 1; j < m_matrices.size(); ++j){
