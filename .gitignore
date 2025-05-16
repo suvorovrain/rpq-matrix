@@ -5,4 +5,3 @@ cmake-build-debug/
 .DS_Store
 res.txt
 pairs/
-typescript
