@@ -6,20 +6,20 @@
 #include <string>
 extern "C"
 {
-#include "../../../GraphBLAS/Include/GraphBLAS.h" // here put GB matirx
+#include "../../../GraphBLAS/Include/GraphBLAS.h"
 #include "../../../LAGraph/include/LAGraph.h"
 }
 
 #ifndef RPQ_MATRIX_BASELINEGB_HPP
 #define RPQ_MATRIX_BASELINEGB_HPP
-#define fullSide (~(uint)0) // (*** got this from original matrix.h include. Maybe remove later idk ***)
+#define fullSide (~(uint)0) 
 
 #define mmax(x, y) (((x) > (y)) ? (x) : (y))
 namespace bm_baselinegb
 {
     extern "C"
     {
-#include "baseline/utilstime.h" // here all good
+#include "baseline/utilstime.h"
     }
 
     class wrapper
@@ -62,9 +62,9 @@ namespace bm_baselinegb
                 GrB_Matrix_setElement_BOOL(E, true, i, i);
             }
 
-            GrB_Index nvals;
-            GrB_Matrix_nvals(&nvals, E);
-            printf("%d E\n", nvals);
+            // GrB_Index nvals;
+            // GrB_Matrix_nvals(&nvals, E);
+            // printf("%d E\n", nvals);
             return E;
         };
 
@@ -151,6 +151,7 @@ namespace bm_baselinegb
         // version with one row or one column, or both
         static inline GrB_Matrix sum1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint64_t col)
         {
+            // printf("DEBUG: sum1\n");
             GrB_Index nrows, ncols;
             GrB_Matrix C;
             GrB_Matrix_nrows(&nrows, A);
@@ -170,6 +171,7 @@ namespace bm_baselinegb
             }
             else if (row == full_side && col != full_side)
             {
+                // printf("DEBUG: sum1 !col\n");
                 GrB_Vector colA, colB, colC;
                 GrB_Vector_new(&colA, GrB_BOOL, nrows);
                 GrB_Vector_new(&colB, GrB_BOOL, nrows);
@@ -185,18 +187,27 @@ namespace bm_baselinegb
                 return C;
             }
             else
-
             {
-                GrB_Matrix AT, BT, CT;
-                AT = transpose(A);
+                // GrB_Index nvalsA, nvalsB;
+                // GrB_Matrix_nvals(&nvalsA,A);
+                // GrB_Matrix_nvals(&nvalsB,B);
 
-                BT = transpose(B);
-                C = sum1(col, AT, BT, row);
-                CT = transpose(C);
-                destroy(C);
-                destroy(AT);
-                destroy(BT);
-                return CT;
+                // printf("DEBUG: sum1 !row\n");
+                //         printf("DEBUG: A elems = %d and B elems = %d\n", nvalsA,nvalsB);
+
+                GrB_Vector rowA, rowB, rowC;
+                GrB_Vector_new(&rowA, GrB_BOOL, ncols);
+                GrB_Vector_new(&rowB, GrB_BOOL, ncols);
+                GrB_Vector_new(&rowC, GrB_BOOL, ncols);
+                GrB_Col_extract(rowA, NULL, NULL, A, GrB_ALL, ncols, row-1, GrB_DESC_T0);
+                GrB_Col_extract(rowB, NULL, NULL, B, GrB_ALL, ncols, row-1, GrB_DESC_T0);
+
+                GrB_Vector_eWiseAdd_BinaryOp(rowC, NULL, NULL, GrB_LOR, rowA, rowB, NULL);
+                GrB_Row_assign(C, NULL, NULL, rowC, row-1, GrB_ALL, ncols, NULL);
+                GrB_Vector_free(&rowA);
+                GrB_Vector_free(&rowB);
+                GrB_Vector_free(&rowC);
+                return C;
             }
         };
 
@@ -204,9 +215,9 @@ namespace bm_baselinegb
         // only rowA of A and colB of B are considered if not fullSide
         static inline GrB_Matrix mult(GrB_Matrix A, GrB_Matrix B)
         {
-            GrB_Index nvalsA, nvalsB;
-            GrB_Matrix_nvals(&nvalsA, A);
-            GrB_Matrix_nvals(&nvalsB, B);
+            // GrB_Index nvalsA, nvalsB;
+            // GrB_Matrix_nvals(&nvalsA, A);
+            // GrB_Matrix_nvals(&nvalsB, B);
             GrB_Index nrows, ncols;
             GrB_Matrix C;
             GrB_Matrix_nrows(&nrows, A);
@@ -219,6 +230,7 @@ namespace bm_baselinegb
         // version with one row or one column, or both
         static inline GrB_Matrix mult1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint64_t col)
         {
+            // printf("DEBUG: mult1\n");
             GrB_Index nrowsA, ncolsA, nrowsB, ncolsB;
             GrB_Matrix C;
             GrB_Matrix_nrows(&nrowsA, A);
@@ -334,6 +346,7 @@ namespace bm_baselinegb
         // transitive closure of a matrix, pos says if it's + rather than *
         static inline GrB_Matrix clos(GrB_Matrix A, uint pos)
         {
+
             // std::cout << "unreachable" << std::endl;
             // exit(1);
             GrB_Index nrows, ncols;
@@ -359,7 +372,7 @@ namespace bm_baselinegb
         static inline GrB_Matrix clos_row(uint row, GrB_Matrix ID, GrB_Matrix A, uint pos, uint *coltest)
         {
             GrB_Matrix M, P, S, E;
-
+            
             GrB_Index elems;
 
             GrB_Index nrowsA, ncolsA;
@@ -368,6 +381,7 @@ namespace bm_baselinegb
             uint dim = mmax(nrowsA, ncolsA);
             if (ID == NULL)
             {
+                // printf("DEBUG: clos_row ID null\n");
                 if (pos)
                     E = empty(dim, dim);
                 else
@@ -381,19 +395,23 @@ namespace bm_baselinegb
             {
                 if (pos)
                 {
-
+                    // printf("DEBUG: clow_row !ID pos\n");
                     S = mult1(row, ID, A, full_side);
-                    GrB_Matrix_nvals(&elems, S);
+                    // GrB_Matrix_nvals(&elems, S);
                 }
 
                 else
                 {
+                    // printf("DEBUG: clow_row !ID !pos\n");
+                    // GrB_Index nvalsID;
+                    // GrB_Matrix_nvals(&nvalsID,ID);
+                    // printf("DEBUG:  ID elems in closrow: %d\n", nvalsID);
                     E = empty(dim, dim);
                     S = sum1(row, ID, E, full_side);
                     destroy(E);
                 }
             }
-            GrB_Matrix_nvals(&elems, S);
+            // GrB_Matrix_nvals(&elems, S);
             bool accessS;
             if (coltest)
                 GrB_Matrix_extractElement_BOOL(&accessS, S, row, *coltest);
@@ -437,13 +455,14 @@ namespace bm_baselinegb
                 *coltest = 0;
                 return NULL;
             }
+            // printf("DEBUG: clos_row before return\n");
             return S;
         }
 
         static inline GrB_Matrix clos1(uint64_t row, GrB_Matrix A, uint pos, uint64_t col)
         {
             GrB_Index nrow, ncol;
-
+            // printf("DEBUG: clos1\n");
             GrB_Index nrowsA, ncolsA;
             GrB_Matrix_nrows(&nrowsA, A);
             GrB_Matrix_ncols(&ncolsA, A);
@@ -479,9 +498,7 @@ namespace bm_baselinegb
 
             GrB_Vector col_vec;
             GrB_Vector_new(&col_vec, GrB_BOOL, side);
-            GrB_Matrix AT;
-            AT = transpose(A);
-            GrB_Col_extract(col_vec, NULL, NULL, AT, GrB_ALL, side, col - 1, NULL);
+            GrB_Col_extract(col_vec, NULL, NULL, A, GrB_ALL, side, col - 1, GrB_DESC_T0);
 
             if (ncol < nrow)
             {
@@ -505,6 +522,11 @@ namespace bm_baselinegb
         // computes [row] A B* [col] (pos=0) or [row] A B+ [col] (pos=1)
         static inline GrB_Matrix mult_clos1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint pos, uint64_t col)
         {
+                        // printf("DEBUG: mult_clos1\n");
+            // GrB_Index nvalsA;
+            // GrB_Matrix_nvals(&nvalsA,A);
+                //  printf("DEBUG:  A elems in mult_clos1: %d\n", nvalsA);
+
             GrB_Index nrowsA, ncolsA, nrowsB, ncolsB;
             GrB_Matrix_nrows(&nrowsA, A);
             GrB_Matrix_ncols(&ncolsA, A);
@@ -534,6 +556,7 @@ namespace bm_baselinegb
             {
                 if (col == full_side)
                 {
+                    // printf("DEBUG: mult_clos !row\n");
                     return clos_row(row, A, B, pos, NULL);
                 }
             }
@@ -547,6 +570,8 @@ namespace bm_baselinegb
         // computes [row] A* B [col] (pos=0) or [row] A+ B [col] (pos=1)
         static inline GrB_Matrix clos_mult1(uint64_t row, GrB_Matrix A, uint pos, GrB_Matrix B, uint64_t col)
         {
+                        // printf("DEBUG: clos_mult1\n");
+
             GrB_Matrix At, Bt;
             At = transpose(A);
             Bt = transpose(B);
