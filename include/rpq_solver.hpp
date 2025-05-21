@@ -644,8 +644,10 @@ namespace rpq
                         list_type ll, rl;
                         if (node->e2->type == STAR || node->e2->type == PLUS)
                         { // Special case!
+                            // printf("DEBUG: Special case!\n");
                             traversal_row_fixed(rpqTree, node->e1, CONC, row, ll);
                             traversal(rpqTree, node->e2, CONC, rl, true);
+                            // printf("DEBUG: After special case\n");
                             matrix tmp;
                             uint pos = (node->e2->type == STAR) ? 0 : 1;
                             if (ll.size() > 1)
@@ -1275,10 +1277,13 @@ namespace rpq
                 // std::cout <<  std::endl << file << std::endl;   
                 m_matrices[i] = wrapper::load(f);
                 fclose(f);
-                // GrB_Index nrows, ncols;
+                // GrB_Index nrows, ncols, nvals;
                 // GrB_Matrix_nrows(&nrows, m_matrices[i]);
                 // GrB_Matrix_ncols(&ncols, m_matrices[i]);
+                // GrB_Matrix_nvals(&nvals, m_matrices[i]);
                 // std::cout <<" " << nrows <<" " << ncols  << " matrix params" << std::endl;
+                                // std::cout << nvals << " nvals" << std::endl;
+
                 space += wrapper::space(m_matrices[i]);
             }
             // printf(" done... %li total words (%0.2f bpt)\n", space, space * (ww / 8) / (float)n_triples);
@@ -1332,14 +1337,17 @@ namespace rpq
         data_type solve_con_to_var(std::string &query, int s_id, bool &rem)
         {
             list_type res;
+            GxB_Global_Option_set(GrB_GLOBAL, GrB_ROWMAJOR, GrB_STORAGE_ORIENTATION_HINT);
             RpqTree rpqTree(query, map_P, m_matrices.size());
             traversal_row_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, res);
             return res.front();
+
         }
 
         data_type solve_var_to_con(std::string &query, int o_id, bool &rem)
         {
             list_type res;
+            GxB_Global_Option_set(GrB_GLOBAL, GrB_COLMAJOR, GrB_STORAGE_ORIENTATION_HINT);
             RpqTree rpqTree(query, map_P, m_matrices.size());
             traversal_col_fixed(&rpqTree, rpqTree.root(), ROOT, o_id, res);
             return res.front();
