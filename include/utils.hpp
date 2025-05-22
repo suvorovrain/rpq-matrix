@@ -285,20 +285,21 @@ namespace rpq
                 {
                     s_matrix m = wrapper_type::transpose(res.m);
                     auto t2 = std::chrono::high_resolution_clock::now();
+                    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
                     // (*** get number of nonzero values ***)
                     GrB_Index nvals;
                     GrB_Matrix_nvals(&nvals, res.m);
-                    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
                     std::cout << i << ";" << nvals << ";" << t << std::endl;
                 }
                 else
                 {
                     auto t2 = std::chrono::high_resolution_clock::now();
+                    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
                     // (*** get number of nonzero values ***)
                     GrB_Index nvals;
                     GrB_Matrix_nvals(&nvals, res.m);
-                    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+                    
                     std::cout << i << ";" << nvals << ";" << t<< std::endl;
                     if (res.is_tmp)
                         wrapper_type::destroy(res.m);
