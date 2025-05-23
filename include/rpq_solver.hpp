@@ -1,13 +1,13 @@
 //
 // Created by Adrián on 3/5/23.
 //
-#define __STDC_VERSION__ 201400L
+// #define __STDC_VERSION__ 201400L
 
 #ifndef MATRIX_RPQ_RPQ_SOLVER_HPP
 #define MATRIX_RPQ_RPQ_SOLVER_HPP
 
 // #define N 958844164
-#define SIZE 5420 // 1 to 5419
+#define SIZE 9 // 1 to 5419
 // #define V 296008192 // 1 to...
 
 #ifndef ww
@@ -1283,9 +1283,11 @@ namespace rpq
                 }
 
                 // std::cout <<  std::endl << file << std::endl;
+                // m_matrices[i] = wrapper::load(f);
                 pair = wrapper::load(f);
                 mcsr_matrices[i] = pair.Acsr;
                 mcsc_matrices[i] = pair.Acsc;
+                m_matrices[i] = pair.Acsr;
                 fclose(f);
                 // GrB_Index nrows, ncols, nvals;
                 // GrB_Matrix_nrows(&nrows, m_matrices[i]);
@@ -1294,7 +1296,7 @@ namespace rpq
                 // std::cout <<" " << nrows <<" " << ncols  << " matrix params" << std::endl;
                 // std::cout << nvals << " nvals" << std::endl;
 
-                space += wrapper::space(mcsr_matrices[i]);
+                space += wrapper::space(m_matrices[i]);
             }
             // printf(" done... %li total words (%0.2f bpt)\n", space, space * (ww / 8) / (float)n_triples);
 
@@ -1349,8 +1351,10 @@ namespace rpq
         {
             list_type res;
             m_matrices = mcsr_matrices;
-            GrB_set(GrB_GLOBAL, 2, GrB_STORAGE_ORIENTATION_HINT);
+            // GxB_Global_Option_set(GrB_GLOBAL, GxB_BY_ROW, GrB_STORAGE_ORIENTATION_HINT);
+            GrB_Global_set_INT32(GrB_GLOBAL, 2, GrB_STORAGE_ORIENTATION_HINT);
             RpqTree rpqTree(query, map_P, m_matrices.size());
+            // printf("DEBUG: ROW FIXED --- CSR\n");
             traversal_row_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, res);
             return res.front();
         }
@@ -1359,8 +1363,10 @@ namespace rpq
         {
             list_type res;
             m_matrices = mcsc_matrices;
-            GrB_set(GrB_GLOBAL, 1, GrB_STORAGE_ORIENTATION_HINT);
+            // GxB_Global_Option_set(GrB_GLOBAL, GxB_BY_COL, GrB_STORAGE_ORIENTATION_HINT);
+            GrB_Global_set_INT32(GrB_GLOBAL, 1, GrB_STORAGE_ORIENTATION_HINT);
             RpqTree rpqTree(query, map_P, m_matrices.size());
+            // printf("DEBUG: COL FIXED --- CSC\n");
             traversal_col_fixed(&rpqTree, rpqTree.root(), ROOT, o_id, res);
             return res.front();
         }
