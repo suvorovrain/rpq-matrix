@@ -201,81 +201,56 @@ namespace bm_baselinegb
             }
             else if (row == full_side && col != full_side)
             {
-                // printf("DEBUG: sum1 !col\n");
-                GrB_Vector colA, colB, colC;
-                GrB_Vector_new(&colA, GrB_BOOL, nrows);
-                GrB_Vector_new(&colB, GrB_BOOL, nrows);
-                GrB_Vector_new(&colC, GrB_BOOL, nrows);
-                GrB_Col_extract(colA, NULL, NULL, A, GrB_ALL, nrows, col - 1, NULL);
-                GrB_Col_extract(colB, NULL, NULL, B, GrB_ALL, nrows, col - 1, NULL);
-
-                GrB_Index nvalsVA, nvalsVB;
-                GrB_Vector_nvals(&nvalsVA, colA);
-                GrB_Vector_nvals(&nvalsVB, colB);
-                // printf("A: %d || B: %d\n", nvalsVA, nvalsVB);
-                if (nvalsVA == 0 || nvalsVB == 0)
+                GrB_Vector full;
+                GrB_Vector_new(&full, GrB_BOOL, nrows);
+                
+                GrB_Vector_setElement_BOOL(full, true, 0);
+                GrB_Index *Id = (GrB_Index *)malloc(nrows * sizeof(GrB_Index));
+                bool *X = (bool *)malloc(nrows * sizeof(bool));
+                for (GrB_Index i = 0; i < nrows; i++)
                 {
-                    if (nvalsVA == 0)
-                    {
-                        GrB_Col_assign(C, NULL, NULL, colB, GrB_ALL, nrows, col - 1, NULL);
-                    }
-                    else
-                    {
-                        GrB_Col_assign(C, NULL, NULL, colA, GrB_ALL, nrows, col - 1, NULL);
-                    }
-                    GrB_Vector_free(&colA);
-                    GrB_Vector_free(&colB);
-                    GrB_Vector_free(&colC);
-                    return C;
+                    Id[i] = i;
+                    X[i] = true;
                 }
+                GrB_Vector_build_BOOL(full, Id, X, nrows, GrB_LOR);
+                free(Id);
+                free(X);
 
-                GrB_Vector_eWiseAdd_BinaryOp(colC, NULL, NULL, GxB_ANY_BOOL, colA, colB, NULL);
-                GrB_Col_assign(C, NULL, NULL, colC, GrB_ALL, nrows, col - 1, NULL);
-                GrB_Vector_free(&colA);
-                GrB_Vector_free(&colB);
-                GrB_Vector_free(&colC);
+               
+                GrB_Matrix mask;
+                GrB_Matrix_new(&mask, GrB_BOOL, nrows, ncols);
+                GrB_Col_assign(mask, NULL, NULL, full, GrB_ALL, nrows, col - 1, NULL);
+
+                GrB_Vector_free(&full);
+
+                GrB_Matrix_eWiseAdd_BinaryOp(C, mask, NULL, GxB_ANY_BOOL, A, B, NULL);
+                GrB_Matrix_free(&mask);
                 return C;
             }
-            else
+            else // row != full_side && col == full_side
             {
-                // GrB_Index nvalsA, nvalsB;
-                // GrB_Matrix_nvals(&nvalsA,A);
-                // GrB_Matrix_nvals(&nvalsB,B);
-
-                // printf("DEBUG: sum1 !row\n");
-                //         printf("DEBUG: A elems = %d and B elems = %d\n", nvalsA,nvalsB);
-
-                GrB_Vector rowA, rowB, rowC;
-                GrB_Vector_new(&rowA, GrB_BOOL, ncols);
-                GrB_Vector_new(&rowB, GrB_BOOL, ncols);
-                GrB_Vector_new(&rowC, GrB_BOOL, ncols);
-                GrB_Col_extract(rowA, NULL, NULL, A, GrB_ALL, ncols, row - 1, GrB_DESC_T0);
-                GrB_Col_extract(rowB, NULL, NULL, B, GrB_ALL, ncols, row - 1, GrB_DESC_T0);
-                GrB_Index nvalsVA, nvalsVB;
-                GrB_Vector_nvals(&nvalsVA, rowA);
-                GrB_Vector_nvals(&nvalsVB, rowB);
-                // printf("A: %d || B: %d\n", nvalsVA, nvalsVB);
-                if (nvalsVA == 0 || nvalsVB == 0)
+                GrB_Vector full;
+                GrB_Vector_new(&full, GrB_BOOL, ncols);
+                GrB_Vector_setElement_BOOL(full, true, 0);
+                GrB_Index *Id = (GrB_Index *)malloc(ncols * sizeof(GrB_Index));
+                bool *X = (bool *)malloc(ncols * sizeof(bool));
+                for (GrB_Index i = 0; i < ncols; i++)
                 {
-                    if (nvalsVA == 0)
-                    {
-                        GrB_Row_assign(C, NULL, NULL, rowB, row - 1, GrB_ALL, ncols, NULL);
-                    }
-                    else
-                    {
-                        GrB_Row_assign(C, NULL, NULL, rowA, row - 1, GrB_ALL, ncols, NULL);
-                    }
-                    GrB_Vector_free(&rowA);
-                    GrB_Vector_free(&rowB);
-                    GrB_Vector_free(&rowC);
-                    return C;
+                    Id[i] = i;
+                    X[i] = true;
                 }
+                GrB_Vector_build_BOOL(full, Id, X, ncols, GrB_LOR);
+                free(Id);
+                free(X);
 
-                GrB_Vector_eWiseAdd_BinaryOp(rowC, NULL, NULL, GxB_ANY_BOOL, rowA, rowB, NULL);
-                GrB_Row_assign(C, NULL, NULL, rowC, row - 1, GrB_ALL, ncols, NULL);
-                GrB_Vector_free(&rowA);
-                GrB_Vector_free(&rowB);
-                GrB_Vector_free(&rowC);
+                GrB_Matrix mask;
+                GrB_Matrix_new(&mask, GrB_BOOL, nrows, ncols);
+                GrB_Row_assign(mask, NULL, NULL, full, row - 1, GrB_ALL, ncols, NULL);
+
+                GrB_Vector_free(&full);
+
+                GrB_Matrix_eWiseAdd_BinaryOp(C, mask, NULL, GxB_ANY_BOOL, A, B, NULL);
+                GrB_Matrix_free(&mask);
                 return C;
             }
         };
@@ -390,21 +365,27 @@ namespace bm_baselinegb
             }
             else if (row == full_side && col != full_side)
             {
-                
+
                 // GxB_Matrix_Option_set(C, GxB_FORMAT, GxB_BY_COL);
 
-                // printf("===========DEBUG INFO IN MULT1 ROW = FULL ===========\n");
+                // (A x B)<c> = A x (B<c>)
+                GrB_Matrix tmpB;
+                GrB_Matrix_new(&tmpB, GrB_BOOL, nrowsB, ncolsB);
+
+                GrB_Vector colB;
+                GrB_Vector_new(&colB, GrB_BOOL, nrowsB);
+                //  printf("===========DEBUG INFO IN MULT1 ROW = FULL ===========\n");
                 // GxB_Format_Value fmtA, fmttmpB, fmtB;
                 // GxB_Matrix_Option_get(A, GxB_FORMAT, &fmtA);
                 // GxB_Matrix_Option_get(B, GxB_FORMAT, &fmtB);
-                // // GxB_Matrix_Option_get(tmpB, GxB_FORMAT, &fmttmpB);
+                // GxB_Matrix_Option_get(tmpB, GxB_FORMAT, &fmttmpB);
 
                 // printf("DEBUG: A is in %s format\n", fmtA == GxB_BY_COL ? "CSC" : fmtA == GxB_BY_ROW ? "CSR"
                 //                                                                                      : "unknown");
                 // printf("DEBUG: B is in %s format\n", fmtB == GxB_BY_COL ? "CSC" : fmtB == GxB_BY_ROW ? "CSR"
                 //                                                                                      : "unknown");
-                // // printf("DEBUG: tmpB is in %s format\n", fmttmpB == GxB_BY_COL ? "CSC" : fmttmpB == GxB_BY_ROW ? "CSR"
-                // //                                                                                               : "unknown");
+                // printf("DEBUG: tmpB is in %s format\n", fmttmpB == GxB_BY_COL ? "CSC" : fmttmpB == GxB_BY_ROW ? "CSR"
+                //                                                                                               : "unknown");
                 // bool isoA, isoB, isocolB;
                 // // GrB_Matrix_assign_BOOL(A, A, NULL, true, GrB_ALL, nrows, GrB_ALL, ncols, GrB_DESC_S);
                 // GxB_Matrix_iso(&isoA, A);
@@ -419,38 +400,11 @@ namespace bm_baselinegb
                 // {
                 //     printf("DEBUG: Matrix B is iso.\n");
                 // }
-                // (A x B)<c> = A x (B<c>)
-                GrB_Vector colB, colC;
-                GrB_Vector_new(&colB, GrB_BOOL, nrowsB);
                 GrB_Col_extract(colB, GrB_NULL, GrB_NULL, B, GrB_ALL, nrowsB, col - 1, GrB_NULL);
-                // GrB_Col_assign(tmpB, GrB_NULL, GrB_NULL, colB, GrB_ALL, nrowsB, col - 1, GrB_NULL);
-                // GxB_Vector_iso(&isocolB, colB);
-                //     if (isocolB)
-                //     {
-                //         printf("DEBUG: vector B is iso.\n");
-                //     }
+                GrB_Col_assign(tmpB, GrB_NULL, GrB_NULL, colB, GrB_ALL, nrowsB, col - 1, GrB_NULL);
 
-                GrB_Index nvalsA, nvalsVB;
-                GrB_Matrix_nvals(&nvalsA, A);
-                GrB_Vector_nvals(&nvalsVB, colB);
-                // printf("A: %d || B: %d\n", nvalsVA, nvalsVB);
-                if (nvalsA == 0 || nvalsVB == 0)
-                {
-                    GrB_Vector_free(&colB);
-                    destroy(C);
-                    return empty(nrowsA, ncolsB);
-                }
-
-                GrB_Vector_new(&colC, GrB_BOOL, nrowsA); // maybe wrong size
-                GrB_mxv(colC, GrB_NULL, GrB_NULL, GxB_ANY_PAIR_BOOL, A, colB, GrB_NULL);
-                GrB_Col_assign(C, GrB_NULL, GrB_NULL, colC, GrB_ALL, nrowsA, col - 1, GrB_NULL);
-                // GxB_Matrix_iso(&isotmpB, tmpB);
-                // if (isotmpB)
-                // {
-                //     printf("DEBUG: Matrix tmpB is iso.\n");
-                // }
-                // C = mult(A, tmpB);
-                // destroy(tmpB);
+                C = mult(A, tmpB);
+                destroy(tmpB);
                 GrB_Vector_free(&colB);
                 return C;
             }
@@ -458,7 +412,12 @@ namespace bm_baselinegb
             {
                 // (A x B)<c> = (<r>A) x B
 
-                // printf("===========DEBUG INFO IN MULT1 COL = FULL ===========\n");
+                GrB_Matrix tmpA;
+                GrB_Matrix_new(&tmpA, GrB_BOOL, nrowsA, ncolsA);
+
+                GrB_Vector rowA;
+                GrB_Vector_new(&rowA, GrB_BOOL, ncolsA);
+                //  printf("===========DEBUG INFO IN MULT1 COL = FULL ===========\n");
                 // GxB_Format_Value fmtA, fmttmpA, fmtB;
                 // GxB_Matrix_Option_get(A, GxB_FORMAT, &fmtA);
                 // GxB_Matrix_Option_get(B, GxB_FORMAT, &fmtB);
@@ -487,25 +446,11 @@ namespace bm_baselinegb
                 // {
                 //     printf("DEBUG: Matrix tmpA is iso.\n");
                 // }
-                GrB_Vector rowA, colC;
-                GrB_Vector_new(&rowA, GrB_BOOL, ncolsA);
                 GrB_Col_extract(rowA, GrB_NULL, GrB_NULL, A, GrB_ALL, ncolsA, row - 1, GrB_DESC_T0);
-                GrB_Index nvalsVA, nvalsB;
-                GrB_Vector_nvals(&nvalsVA, rowA);
-                GrB_Matrix_nvals(&nvalsB, B);
-                if (nvalsVA == 0 || nvalsB == 0)
-                {
-                    GrB_Vector_free(&rowA);
-                    destroy(C);
-                    return empty(nrowsA, ncolsB);
-                }
-                GrB_Vector_new(&colC, GrB_BOOL, ncolsB); // maybe wrong size
+                GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row - 1, GrB_ALL, ncolsA, GrB_NULL);
 
-                // GrB_Row_assign(tmpA, GrB_NULL, GrB_NULL, rowA, row - 1, GrB_ALL, ncolsA, GrB_NULL);
-                GrB_vxm(colC, GrB_NULL, GrB_NULL, GxB_ANY_PAIR_BOOL, rowA, B, GrB_NULL);
-                GrB_Row_assign(C, GrB_NULL, GrB_NULL, colC, row - 1, GrB_ALL, ncolsA, GrB_NULL);
-
-                // C = mult(tmpA, B);
+                C = mult(tmpA, B);
+                destroy(tmpA);
                 GrB_Vector_free(&rowA);
                 return C;
             }
