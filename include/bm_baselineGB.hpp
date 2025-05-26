@@ -178,7 +178,7 @@ namespace bm_baselinegb
             return C;
         }
 
-        // version with one row or one column, or both
+         // version with one row or one column, or both
         static inline GrB_Matrix sum1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint64_t col)
         {
             // printf("DEBUG: sum1\n");
@@ -201,56 +201,83 @@ namespace bm_baselinegb
             }
             else if (row == full_side && col != full_side)
             {
-                GrB_Vector full;
-                GrB_Vector_new(&full, GrB_BOOL, nrows);
-                
-                GrB_Vector_setElement_BOOL(full, true, 0);
-                GrB_Index *Id = (GrB_Index *)malloc(nrows * sizeof(GrB_Index));
-                bool *X = (bool *)malloc(nrows * sizeof(bool));
-                for (GrB_Index i = 0; i < nrows; i++)
+                // printf("DEBUG: sum1 !col\n");
+                GrB_Vector colA, colB, colC;
+                GrB_Vector_new(&colA, GrB_BOOL, nrows);
+                GrB_Vector_new(&colB, GrB_BOOL, nrows);
+                GrB_Vector_new(&colC, GrB_BOOL, nrows);
+                GrB_Col_extract(colA, NULL, NULL, A, GrB_ALL, nrows, col - 1, NULL);
+                GrB_Col_extract(colB, NULL, NULL, B, GrB_ALL, nrows, col - 1, NULL);
+
+                GrB_Index nvalsVA, nvalsVB;
+                GrB_Vector_nvals(&nvalsVA, colA);
+                GrB_Vector_nvals(&nvalsVB, colB);
+                // printf("A: %d || B: %d\n", nvalsVA, nvalsVB);
+                if (nvalsVA == 0 || nvalsVB == 0)
                 {
-                    Id[i] = i;
-                    X[i] = true;
+                    if (nvalsVA == 0)
+                    {
+                        GrB_Col_assign(C, NULL, NULL, colB, GrB_ALL, nrows, col - 1, NULL);
+                    }
+                    else
+                    {
+                        GrB_Col_assign(C, NULL, NULL, colA, GrB_ALL, nrows, col - 1, NULL);
+                    }
+                    GrB_Vector_free(&colA);
+                    GrB_Vector_free(&colB);
+                    GrB_Vector_free(&colC);
+                    return C;
                 }
-                GrB_Vector_build_BOOL(full, Id, X, nrows, GrB_LOR);
-                free(Id);
-                free(X);
 
-               
-                GrB_Matrix mask;
-                GrB_Matrix_new(&mask, GrB_BOOL, nrows, ncols);
-                GrB_Col_assign(mask, NULL, NULL, full, GrB_ALL, nrows, col - 1, NULL);
-
-                GrB_Vector_free(&full);
-
-                GrB_Matrix_eWiseAdd_BinaryOp(C, mask, NULL, GxB_ANY_BOOL, A, B, NULL);
-                GrB_Matrix_free(&mask);
+                GrB_Vector_eWiseAdd_BinaryOp(colC, NULL, NULL, GxB_ANY_BOOL, colA, colB, NULL);
+                GrB_Col_assign(C, NULL, NULL, colC, GrB_ALL, nrows, col - 1, NULL);
+                GrB_Vector_free(&colA);
+                GrB_Vector_free(&colB);
+                GrB_Vector_free(&colC);
                 return C;
             }
-            else // row != full_side && col == full_side
+            else
             {
-                GrB_Vector full;
-                GrB_Vector_new(&full, GrB_BOOL, ncols);
-                GrB_Vector_setElement_BOOL(full, true, 0);
-                GrB_Index *Id = (GrB_Index *)malloc(ncols * sizeof(GrB_Index));
-                bool *X = (bool *)malloc(ncols * sizeof(bool));
-                for (GrB_Index i = 0; i < ncols; i++)
+                // GrB_Index nvalsA, nvalsB;
+                // GrB_Matrix_nvals(&nvalsA,A);
+                // GrB_Matrix_nvals(&nvalsB,B);
+
+                // printf("DEBUG: sum1 !row\n");
+                //         printf("DEBUG: A elems = %d and B elems = %d\n", nvalsA,nvalsB);
+
+                GrB_Vector rowA, rowB, rowC;
+                GrB_Vector_new(&rowA, GrB_BOOL, ncols);
+                GrB_Vector_new(&rowB, GrB_BOOL, ncols);
+                GrB_Vector_new(&rowC, GrB_BOOL, ncols);
+                GrB_Col_extract(rowA, NULL, NULL, A, GrB_ALL, ncols, row - 1, GrB_DESC_T0);
+                GrB_Col_extract(rowB, NULL, NULL, B, GrB_ALL, ncols, row - 1, GrB_DESC_T0);
+                GrB_Index nvalsVA, nvalsVB;
+                GrB_Vector_nvals(&nvalsVA, rowA);
+                GrB_Vector_nvals(&nvalsVB, rowB);
+                // printf("A: %d || B: %d\n", nvalsVA, nvalsVB);
+                if (nvalsVA == 0 || nvalsVB == 0)
                 {
-                    Id[i] = i;
-                    X[i] = true;
+                    if (nvalsVA == 0)
+                    {
+                      GrB_Row_assign(C, NULL, NULL, rowB, row - 1, GrB_ALL, ncols, NULL);
+                        GrB_Row_assign(C, NULL, NULL, rowB, row - 1, GrB_ALL, ncols, NULL);
+                    }
+                    else
+                    {
+                      GrB_Row_assign(C, NULL, NULL, rowA, row - 1, GrB_ALL, ncols, NULL);
+                        GrB_Row_assign(C, NULL, NULL, rowA, row - 1, GrB_ALL, ncols, NULL);
+                    }
+                    GrB_Vector_free(&rowA);
+                    GrB_Vector_free(&rowB);
+                    GrB_Vector_free(&rowC);
+                    return C;
                 }
-                GrB_Vector_build_BOOL(full, Id, X, ncols, GrB_LOR);
-                free(Id);
-                free(X);
 
-                GrB_Matrix mask;
-                GrB_Matrix_new(&mask, GrB_BOOL, nrows, ncols);
-                GrB_Row_assign(mask, NULL, NULL, full, row - 1, GrB_ALL, ncols, NULL);
-
-                GrB_Vector_free(&full);
-
-                GrB_Matrix_eWiseAdd_BinaryOp(C, mask, NULL, GxB_ANY_BOOL, A, B, NULL);
-                GrB_Matrix_free(&mask);
+                GrB_Vector_eWiseAdd_BinaryOp(rowC, NULL, NULL, GxB_ANY_BOOL, rowA, rowB, NULL);
+                GrB_Row_assign(C, NULL, NULL, rowC, row - 1, GrB_ALL, ncols, NULL);
+                GrB_Vector_free(&rowA);
+                GrB_Vector_free(&rowB);
+                GrB_Vector_free(&rowC);
                 return C;
             }
         };
