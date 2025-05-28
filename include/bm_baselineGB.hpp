@@ -178,7 +178,7 @@ namespace bm_baselinegb
             return C;
         }
 
-         // version with one row or one column, or both
+        // version with one row or one column, or both
         static inline GrB_Matrix sum1(uint64_t row, GrB_Matrix A, GrB_Matrix B, uint64_t col)
         {
             // printf("DEBUG: sum1\n");
@@ -202,6 +202,9 @@ namespace bm_baselinegb
             else if (row == full_side && col != full_side)
             {
                 // printf("DEBUG: sum1 !col\n");
+
+                // GrB_Matrix tmpC = sum(A,B);
+
                 GrB_Vector colA, colB, colC;
                 GrB_Vector_new(&colA, GrB_BOOL, nrows);
                 GrB_Vector_new(&colB, GrB_BOOL, nrows);
@@ -245,6 +248,13 @@ namespace bm_baselinegb
                 // printf("DEBUG: sum1 !row\n");
                 //         printf("DEBUG: A elems = %d and B elems = %d\n", nvalsA,nvalsB);
 
+                // GrB_Matrix tmpC;
+                // tmpC = sum(A,B);
+                // GrB_Vector  rowC;
+                // GrB_Vector_new(&rowC, GrB_BOOL, ncols);
+                // GrB_Col_extract(rowC, NULL, NULL, tmpC, GrB_ALL, ncols, row - 1, GrB_DESC_T0);
+                // GrB_Row_assign(C, NULL, NULL, rowC, row - 1, GrB_ALL, ncols, NULL);
+                // return C;
                 GrB_Vector rowA, rowB, rowC;
                 GrB_Vector_new(&rowA, GrB_BOOL, ncols);
                 GrB_Vector_new(&rowB, GrB_BOOL, ncols);
@@ -259,12 +269,11 @@ namespace bm_baselinegb
                 {
                     if (nvalsVA == 0)
                     {
-                      GrB_Row_assign(C, NULL, NULL, rowB, row - 1, GrB_ALL, ncols, NULL);
+
                         GrB_Row_assign(C, NULL, NULL, rowB, row - 1, GrB_ALL, ncols, NULL);
                     }
                     else
                     {
-                      GrB_Row_assign(C, NULL, NULL, rowA, row - 1, GrB_ALL, ncols, NULL);
                         GrB_Row_assign(C, NULL, NULL, rowA, row - 1, GrB_ALL, ncols, NULL);
                     }
                     GrB_Vector_free(&rowA);
@@ -483,42 +492,71 @@ namespace bm_baselinegb
             }
         }
 
+        // static inline GrB_Matrix pow(GrB_Matrix A)
+        // {
+        //     GrB_Index nrows, ncols;
+        //     GrB_Matrix_nrows(&nrows, A);
+        //     GrB_Matrix_ncols(&ncols, A);
+
+        //     GrB_Matrix result;
+        //     GrB_Matrix_new(&result, GrB_BOOL, nrows, ncols);
+        //     GrB_Matrix_dup(&result, A);
+
+        //     GrB_Matrix prev;
+        //     GrB_Matrix_new(&prev, GrB_BOOL, nrows, ncols);
+
+        //     GrB_Index prev_nvals = 0, result_nvals = 0;
+        //     bool changed;
+        //     do
+        //     {
+
+        //         GrB_Matrix temp;
+        //         GrB_Matrix_new(&temp, GrB_BOOL, nrows, ncols);
+
+        //         temp = mult(result, A);
+
+        //         result = sum(result, temp);
+
+        //         destroy(temp);
+
+        //         GrB_Matrix_nvals(&prev_nvals, prev);
+        //         GrB_Matrix_nvals(&result_nvals, result);
+        //         changed = result_nvals != prev_nvals;
+
+        //         GrB_Matrix_dup(&prev, result);
+        //     } while (changed);
+        //     destroy(prev);
+        //     GrB_Matrix_free(&prev);
+        //     return result;
+        // }
+
         static inline GrB_Matrix pow(GrB_Matrix A)
         {
             GrB_Index nrows, ncols;
             GrB_Matrix_nrows(&nrows, A);
             GrB_Matrix_ncols(&ncols, A);
 
-            GrB_Matrix result;
-            GrB_Matrix_new(&result, GrB_BOOL, nrows, ncols);
-            GrB_Matrix_dup(&result, A);
-
-            GrB_Matrix prev;
+            GrB_Matrix R, prev;
+            GrB_Matrix_dup(&R, A);
             GrB_Matrix_new(&prev, GrB_BOOL, nrows, ncols);
 
-            GrB_Index prev_nvals = 0, result_nvals = 0;
             bool changed;
             do
             {
+                GrB_Index nvals_before, nvals_after;
+                GrB_Matrix_nvals(&nvals_before, R);
 
-                GrB_Matrix temp;
-                GrB_Matrix_new(&temp, GrB_BOOL, nrows, ncols);
+                GrB_Matrix_dup(&prev, R);
 
-                temp = mult(result, A);
+                GrB_mxm(R, GrB_NULL, GxB_ANY_BOOL, GxB_ANY_PAIR_BOOL,prev, A,GrB_NULL); 
 
-                result = sum(result, temp);
+                GrB_Matrix_nvals(&nvals_after, R);
+                changed = nvals_before != nvals_after;
 
-                destroy(temp);
-
-                GrB_Matrix_nvals(&prev_nvals, prev);
-                GrB_Matrix_nvals(&result_nvals, result);
-                changed = result_nvals != prev_nvals;
-
-                GrB_Matrix_dup(&prev, result);
             } while (changed);
-            destroy(prev);
+
             GrB_Matrix_free(&prev);
-            return result;
+            return R;
         }
 
         // transitive closure of a matrix, pos says if it's + rather than *
@@ -528,6 +566,9 @@ namespace bm_baselinegb
             GrB_Matrix_nrows(&nrows, A);
             GrB_Matrix_ncols(&ncols, A);
             GrB_Matrix C = pow(A);
+            // GrB_Matrix C;
+            // GrB_Matrix_new(&C,GrB_BOOL, nrows,ncols);
+            // GrB_mxm(C, GrB_NULL, GxB_ANY_BOOL, GxB_ANY_PAIR_BOOL, A, A, GrB_NULL);
 
             if (!pos)
             {
@@ -609,12 +650,15 @@ namespace bm_baselinegb
                     return NULL;
                 }
                 elems = elems_new;
-                M = P;
-                P = mult(P, A);
-                destroy(M);
-                M = S;
-                S = sum(S, P);
-                destroy(M);
+                GrB_Matrix_dup(&P, S);
+                 GrB_mxm(S, GrB_NULL, GxB_ANY_BOOL, GxB_ANY_PAIR_BOOL, P, A, GrB_NULL);
+                 destroy(P);
+                // M = P;
+                // P = mult(P, A);
+                // destroy(M);
+                // M = S;
+                // S = sum(S, P);
+                // destroy(M);
                 GrB_Matrix_nvals(&elems_new, S);
             }
             destroy(P);
@@ -688,12 +732,15 @@ namespace bm_baselinegb
                     return NULL;
                 }
                 elems = elems_new;
-                M = P;
-                P = mult(A, P);
-                destroy(M);
-                M = S;
-                S = sum(S, P);
-                destroy(M);
+                 GrB_Matrix_dup(&P, S);
+                 GrB_mxm(S, GrB_NULL, GxB_ANY_BOOL, GxB_ANY_PAIR_BOOL, P, A, GrB_NULL);
+                 destroy(P);
+                // M = P;
+                // P = mult(A, P);
+                // destroy(M);
+                // M = S;
+                // S = sum(S, P);
+                // destroy(M);
                 GrB_Matrix_nvals(&elems_new, S);
             }
 
@@ -725,7 +772,7 @@ namespace bm_baselinegb
                     return clos(A, pos);
                 else
                 {
-                    GrB_Index n;
+                    // GrB_Index n;
                     // At = transpose(A);
                     M = clos_col(col, NULL, A, pos, NULL);
                     // M = transpose(M);
