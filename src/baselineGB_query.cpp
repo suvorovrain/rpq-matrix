@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     // GxB_Global_Option_get(GxB_GLOBAL_NTHREADS, &nthreads);
 
     // printf("GraphBLAS is using %d threads.\n", nthreads);
-    // GrB_Global_set_INT32(GrB_GLOBAL, true, GxB_BURBLE);
+    // GrB_Global_set_INT32(GrB_GLOBAL, true, GxB_BURBLE);  
     if (info != GrB_SUCCESS)
     {
         fprintf(stderr, "Initialization failed!\n");
@@ -49,4 +49,5 @@ int main(int argc, char **argv)
     uint n_preds = atoi(argv[3]);
     uint n_triples = atoi(argv[4]);
     rpq::run_query<bm_baselinegb::wrapper>(dataset, index, queries, n_preds, n_triples);
+    GrB_finalize();
 }
