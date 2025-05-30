@@ -916,7 +916,7 @@ namespace bm_baselinegb
             {
                 if (pos)
                 {
-                    S = mult1(full_side, ID, A, col);
+                    S = mult1(full_side, A,ID, col);
                 }
                 else
                 {
