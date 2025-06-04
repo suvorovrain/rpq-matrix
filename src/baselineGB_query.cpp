@@ -25,12 +25,6 @@ int main(int argc, char **argv)
 {
     GrB_Info info;
     info = GrB_init(GrB_NONBLOCKING);
-    // GxB_Global_Option_set(GxB_GLOBAL_NTHREADS, 20);
-    // int nthreads;
-    // GxB_Global_Option_get(GxB_GLOBAL_NTHREADS, &nthreads);
-
-    // printf("GraphBLAS is using %d threads.\n", nthreads);
-    // GrB_Global_set_INT32(GrB_GLOBAL, true, GxB_BURBLE);  
     if (info != GrB_SUCCESS)
     {
         fprintf(stderr, "Initialization failed!\n");

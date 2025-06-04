@@ -1254,7 +1254,7 @@ namespace rpq
             return index + "/" + ss.str() + ".mat";
         }
 
-    public: // GB!
+    public:
         // TODO: should be const
         std::unordered_map<std::string, uint64_t> &map_SO = m_map_SO;
         std::unordered_map<std::string, uint64_t> &map_P = m_map_P;
@@ -1272,7 +1272,6 @@ namespace rpq
             // printf("Reading %i matrices...", n_preds);
             fflush(stdout);
             struct wrapper::matrix_pair pair;
-            // here i need to read matrices via lagraph
             for (i = 1; i < m_matrices.size(); i++)
             {
                 std::string file = file_name(i, index);
@@ -1282,20 +1281,11 @@ namespace rpq
                     printf("null file");
                 }
 
-                // std::cout <<  std::endl << file << std::endl;
-                // m_matrices[i] = wrapper::load(f);
                 pair = wrapper::load(f);
                 mcsr_matrices[i] = pair.Acsr;
                 mcsc_matrices[i] = pair.Acsc;
                 m_matrices[i] = pair.Acsr;
                 fclose(f);
-                // GrB_Index nrows, ncols, nvals;
-                // GrB_Matrix_nrows(&nrows, m_matrices[i]);
-                // GrB_Matrix_ncols(&ncols, m_matrices[i]);
-                // GrB_Matrix_nvals(&nvals, m_matrices[i]);
-                // std::cout <<" " << nrows <<" " << ncols  << " matrix params" << std::endl;
-                // std::cout << nvals << " nvals" << std::endl;
-
                 space += wrapper::space(m_matrices[i]);
             }
             // printf(" done... %li total words (%0.2f bpt)\n", space, space * (ww / 8) / (float)n_triples);
@@ -1351,10 +1341,9 @@ namespace rpq
         {
             list_type res;
             m_matrices = mcsr_matrices;
-            // GxB_Global_Option_set(GrB_GLOBAL, GxB_BY_ROW, GrB_STORAGE_ORIENTATION_HINT);
+
             GrB_Global_set_INT32(GrB_GLOBAL, 2, GrB_STORAGE_ORIENTATION_HINT);
             RpqTree rpqTree(query, map_P, m_matrices.size());
-            // printf("DEBUG: ROW FIXED --- CSR\n");
             traversal_row_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, res);
             return res.front();
         }
@@ -1363,10 +1352,10 @@ namespace rpq
         {
             list_type res;
             m_matrices = mcsc_matrices;
-            // GxB_Global_Option_set(GrB_GLOBAL, GxB_BY_COL, GrB_STORAGE_ORIENTATION_HINT);
+
             GrB_Global_set_INT32(GrB_GLOBAL, 1, GrB_STORAGE_ORIENTATION_HINT);
             RpqTree rpqTree(query, map_P, m_matrices.size());
-            // printf("DEBUG: COL FIXED --- CSC\n");
+
             traversal_col_fixed(&rpqTree, rpqTree.root(), ROOT, o_id, res);
             return res.front();
         }

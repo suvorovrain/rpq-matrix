@@ -242,7 +242,6 @@ namespace rpq
         typedef typename solver_type::s_matrix s_matrix;
 
         solver_type solver(dataset, index, n_preds, n_triples);
-        // std::cout << "debug: after solver" << std::endl;
         std::string query, line, l2;
         uint64_t i = 1;
         uint64_t elems;
