@@ -8,7 +8,7 @@ The file  `include/rpq_solver` implements the transformation of Regular Path Que
 installation
 
 ```Bash
-git clone https://github.com/adriangbrandon/rpq-matrix.git
+git clone -b gbmod https://github.com/suvorovrain/rpq-matrix.git
 cd rpq-matrix
 mkdir build
 cd build
