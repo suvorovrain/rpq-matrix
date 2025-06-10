@@ -65,7 +65,7 @@ typedef struct {
 
 class RpqTree {
 
-private:
+private:    
 
     void mandatoryPlusTraversal(Tree* e, MandatoryData &md, int& last);
     void mandatoryTraversal(Tree* e, MandatoryData &md, int& last);

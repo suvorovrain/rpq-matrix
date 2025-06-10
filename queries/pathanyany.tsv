@@ -1,0 +1,9 @@
+?x (<coauthor>)* ?y#
+?x (<predecessor>)* ?y#
+?x (<coauthor>)*/<predecessor> ?y#
+?x (<coauthor>)+ ?y#
+?x (<references>/<cite>)* ?y#
+?x <partOf>/<editor>/(<predecessor>|<coauthor>)* ?y#
+?x (<editor>|<creator>)/(<predecessor>|<coauthor>)* ?y#
+?x <partOf>/<editor>/(<predecessor>|<coauthor>)+ ?y#
+?x (<references>/<cite>)+ ?y#

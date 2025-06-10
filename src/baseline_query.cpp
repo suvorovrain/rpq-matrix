@@ -12,7 +12,7 @@
 #include <array>
 #include <utils.hpp>
 
-#include <bm_baseline.hpp>
+#include <bm_baseline.hpp> // only for wrapper. should be changed to bm_baselineGB
 
 #include <rpq_solver.hpp>
 
