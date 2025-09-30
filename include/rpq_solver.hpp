@@ -5,9 +5,9 @@
 #ifndef MATRIX_RPQ_RPQ_SOLVER_HPP
 #define MATRIX_RPQ_RPQ_SOLVER_HPP
 
-#define N 958844164
-#define SIZE 5420 // 1 to 5419
-#define V 296008192 // 1 to...
+#define N 63052
+#define SIZE 9 // 1 to 5419
+#define V 24225 // 1 to...
 
 #ifndef w
 #define w (8*sizeof(uint64_t))
@@ -54,191 +54,113 @@ namespace rpq {
         }
 
         void traversal(RpqTree* rpqTree, Tree* node, int parentType, list_type &res,
-                       bool skip_closure = false){
-            switch(node->type) {
-                case STR:{
-                    auto pred = rpqTree->getPred(node->pos);
-                    matrix a = (pred > SIZE) ? m_matrices[pred-SIZE] :  m_matrices[pred];
-                    res.insert(res.begin(), data_type{a, (pred > SIZE),
-                                                      false, false});
-                    break;
-                }
-                case CONC:
-                {
-                    list_type ll, rl;
-                    traversal(rpqTree, node->e1, CONC, ll);
-                    traversal(rpqTree, node->e2, CONC, rl);
-                    rl.splice(rl.begin(), ll);
-                    if (parentType == CONC){
-                        res = std::move(rl);
-#if VERBOSE
-                        std::cout << "[CONC]: skip" << std::endl;
-#endif
-                    }else{
-                        it_type it1, it2, it1_min, it2_min;
-                        matrix tmp;
-                        while(rl.size() > 2){//Check size if there are more than three elements
-                            it1 = it2 = rl.begin();
-                            ++it2;
-                            uint64_t min = UINT64_MAX, weight;
-                            while(it2 != rl.end()){
-                                weight = wrapper::space(it1->m) + wrapper::space(it2->m);
-                                if(min > weight){
-                                    it1_min = it1;
-                                    it2_min = it2;
-                                    min = weight;
-                                }
-                                ++it1; ++it2;
-                            }
-                            matrix A, B;
-                            s_matrix sA, sB;
-                            A = get_matrix(sA, it1_min->m, it1_min->is_transposed);
-                            B = get_matrix(sB, it2_min->m, it2_min->is_transposed);
-                            tmp = wrapper::mult(A, B);
-                            if(it1_min->is_tmp) wrapper::destroy(it1_min->m);
-                            if(it2_min->is_tmp) wrapper::destroy(it2_min->m);
+               bool skip_closure = false)
+        {
+            switch (node->type) {
+            case STR: {
+                auto pred = rpqTree->getPred(node->pos);
+                matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
+                res.insert(res.begin(), data_type{a, (pred > SIZE), false, false});
+                break;
+            }
 
-                            rl.insert(it1_min, data_type{tmp, false, true, false});
-                            rl.erase(it1_min);
-                            rl.erase(it2_min);
-                        }
-                        it1_min = it2_min = rl.begin();
-                        ++it2_min;
-                        matrix A, B;
-                        s_matrix sA, sB;
-                        A = get_matrix(sA, it1_min->m, it1_min->is_transposed);
-                        B = get_matrix(sB, it2_min->m, it2_min->is_transposed);
-                        tmp = wrapper::mult(A, B);
-                        if(it1_min->is_tmp) wrapper::destroy(it1_min->m);
-                        if(it2_min->is_tmp) wrapper::destroy(it2_min->m);
-                        res.insert(res.begin(), data_type{tmp, false, true, false});
-#if VERBOSE
-                        std::cout << "[CONC]: wrapper::mult" << std::endl;
-#endif
-                    }
-                    break;
-                }
+            case CONC: {
+                list_type ll, rl;
+                traversal(rpqTree, node->e1, CONC, ll);
+                traversal(rpqTree, node->e2, CONC, rl);
+                ll.splice(ll.end(), rl);
 
-                case OOR:
-                {
-                    list_type ll, rl;
-                    traversal(rpqTree, node->e1, OOR, ll);
-                    traversal(rpqTree, node->e2, OOR, rl);
-                    rl.splice(rl.begin(), ll);
-                    if (parentType == OOR){
-                        res = std::move(rl);
-#if VERBOSE
-                        std::cout << "[OR]: skip" << std::endl;
-#endif
-                    }else{
-                        it_type it1, it2, it1_min, it2_min;
-                        matrix tmp;
-                        while(rl.size() > 2){//Check size if there are more than three elements
-                            it1 = it2 = rl.begin();
-                            uint64_t min = UINT64_MAX, weight;
-                            while(it1 != rl.end()){
-                                weight = wrapper::space(it1->m);
-                                if(min > weight){
-                                    it1_min = it1;
-                                    min = weight;
-                                }
-                                ++it1;
-                            }
-                            min = UINT64_MAX;
-                            while(it2 != rl.end()){
-                                if(it2 != it1_min ){
-                                    weight = wrapper::space(it2->m);
-                                    if(min > weight){
-                                        it2_min = it2;
-                                        min = weight;
-                                    }
-                                }
-                                ++it2;
-                            }
-                            matrix A, B;
-                            s_matrix sA, sB;
-                            A = get_matrix(sA, it1_min->m, it1_min->is_transposed);
-                            B = get_matrix(sB, it2_min->m, it2_min->is_transposed);
-                            tmp = wrapper::sum(A, B);
-                            if(it1_min->is_tmp) wrapper::destroy(it1_min->m);
-                            if(it2_min->is_tmp) wrapper::destroy(it2_min->m);
+                auto it = ll.begin();
+                matrix tmp = it->m;
+                bool tmp_is_tmp = it->is_tmp;
+                ++it;
 
-                            rl.insert(it1_min, data_type{tmp, false, true, false});
-                            rl.erase(it1_min);
-                            rl.erase(it2_min);
-                        }
+                for (; it != ll.end(); ++it) {
+                    s_matrix sA, sB;
+                    matrix A = get_matrix(sA, tmp, false);
+                    matrix B = get_matrix(sB, it->m, it->is_transposed);
+                    tmp = wrapper::mult(A, B);
 
-                        it1_min = it2_min = rl.begin();
-                        ++it2_min;
-                        matrix A, B;
-                        s_matrix sA, sB;
-                        A = get_matrix(sA, it1_min->m, it1_min->is_transposed);
-                        B = get_matrix(sB, it2_min->m, it2_min->is_transposed);
-                        tmp = wrapper::sum(A, B);
-                        if(it1_min->is_tmp) wrapper::destroy(it1_min->m);
-                        if(it2_min->is_tmp) wrapper::destroy(it2_min->m);
-                        res.insert(res.begin(), data_type{tmp, false,true, false});
-#if VERBOSE
-                        std::cout << "[OR]: wrapper::sum" << std::endl;
-#endif
-                    }
-                    break;
+                    if (tmp_is_tmp) wrapper::destroy(A);
+                    if (it->is_tmp) wrapper::destroy(it->m);
+
+                    tmp_is_tmp = true;
                 }
-                case STAR:
-                {
-                    list_type ll;
-                    traversal(rpqTree, node->e1, STAR, ll);
-                    if(!skip_closure){
-                        matrix A;
-                        s_matrix sA;
-                        A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
-                        matrix tmp = wrapper::clos(A, 0);
-                        if(ll.front().is_tmp) wrapper::destroy(ll.front().m);
-                        // std::cout << "STAR : " << ll.front() << std::endl;
-                        res.insert(res.begin(), data_type{tmp, false, true, false});
-#if VERBOSE
-                        std::cout << "[STAR]: matClos" << std::endl;
-#endif
-                    }else{
-                        res = std::move(ll);
-#if VERBOSE
-                        std::cout << "[STAR]: skip" << std::endl;
-#endif
-                    }
-                    break;
+                res.insert(res.begin(), data_type{tmp, false, true, false});
+                break;
+            }
+
+            case OOR: {
+                list_type ll, rl;
+                traversal(rpqTree, node->e1, OOR, ll);
+                traversal(rpqTree, node->e2, OOR, rl);
+                ll.splice(ll.end(), rl);
+
+                auto it = ll.begin();
+                matrix tmp = it->m;
+                bool tmp_is_tmp = it->is_tmp;
+                ++it;
+
+                for (; it != ll.end(); ++it) {
+                    s_matrix sA, sB;
+                    matrix A = get_matrix(sA, tmp, false);
+                    matrix B = get_matrix(sB, it->m, it->is_transposed);
+                    tmp = wrapper::sum(A, B);
+
+                    if (tmp_is_tmp) wrapper::destroy(A);
+                    if (it->is_tmp) wrapper::destroy(it->m);
+
+                    tmp_is_tmp = true;
                 }
-                case PLUS:
-                {
-                    list_type ll;
-                    traversal(rpqTree, node->e1, PLUS, ll);
-                    if(!skip_closure){
-                        matrix A;
-                        s_matrix sA;
-                        A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
-                        matrix tmp = wrapper::clos(A, 1);
-                        if(ll.front().is_tmp) wrapper::destroy(ll.front().m);
-                        res.insert(res.begin(), data_type{tmp, false,true, false});
-                    }else{
-                        res = std::move(ll);
-                    }
-                    break;
-                }
-                case QUESTION:
-                {
-                    list_type ll;
-                    traversal(rpqTree, node->e1, QUESTION, ll);
-                    matrix A;
+                res.insert(res.begin(), data_type{tmp, false, true, false});
+                break;
+            }
+
+            case STAR: {
+                list_type ll;
+                traversal(rpqTree, node->e1, STAR, ll);
+                if (!skip_closure) {
                     s_matrix sA;
-                    A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
-                    matrix Id = wrapper::id(std::max(A->height, A->width));
-                    matrix tmp = wrapper::sum(A, Id);
-                    wrapper::destroy(Id);
-                    if(ll.front().is_tmp) wrapper::destroy(ll.front().m);
-                    res.insert(res.begin(), data_type{tmp, false,true, false});
-                    break;
+                    matrix A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
+                    matrix tmp = wrapper::clos(A, 0);
+                    if (ll.front().is_tmp) wrapper::destroy(ll.front().m);
+                    res.insert(res.begin(), data_type{tmp, false, true, false});
+                } else {
+                    res = std::move(ll);
                 }
+                break;
+            }
+
+            case PLUS: {
+                list_type ll;
+                traversal(rpqTree, node->e1, PLUS, ll);
+                if (!skip_closure) {
+                    s_matrix sA;
+                    matrix A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
+                    matrix tmp = wrapper::clos(A, 1);
+                    if (ll.front().is_tmp) wrapper::destroy(ll.front().m);
+                    res.insert(res.begin(), data_type{tmp, false, true, false});
+                } else {
+                    res = std::move(ll);
+                }
+                break;
+            }
+
+            case QUESTION: {
+                list_type ll;
+                traversal(rpqTree, node->e1, QUESTION, ll);
+                s_matrix sA;
+                matrix A = get_matrix(sA, ll.front().m, ll.front().is_transposed);
+                matrix Id = wrapper::id(std::max(A->height, A->width));
+                matrix tmp = wrapper::sum(A, Id);
+                wrapper::destroy(Id);
+                if (ll.front().is_tmp) wrapper::destroy(ll.front().m);
+                res.insert(res.begin(), data_type{tmp, false, true, false});
+                break;
+            }
             }
         }
+
 
         void traversal_col_fixed(RpqTree* rpqTree, Tree* node, int parentType, int col, list_type &res,
                                  bool skip_closure = false){
