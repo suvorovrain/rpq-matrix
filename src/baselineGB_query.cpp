@@ -20,7 +20,6 @@
 // #define S 5420 // 1 to 5419
 // #define V 296008192 // 1 to...
 
-// #include "../../GraphBLAS/Include/GraphBLAS.h"
 int main(int argc, char **argv)
 {
     GrB_Info info;

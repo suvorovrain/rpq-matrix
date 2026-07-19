@@ -18,7 +18,7 @@
 
 extern "C"
 {
-#include "../../../GraphBLAS/Include/GraphBLAS.h" // here put GB matirx
+#include <GraphBLAS.h>
 }
 
 namespace rpq

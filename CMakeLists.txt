@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 2.8.7)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
+get_filename_component(RPQ_BENCH_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
+set(RPQ_BENCH_VENDOR_DIR "${RPQ_BENCH_ROOT}/vendor" CACHE PATH "Path to RPQ_bench vendor libraries")
+set(GRAPHBLAS_ROOT "${RPQ_BENCH_VENDOR_DIR}/GraphBLAS")
+set(LAGRAPH_ROOT "${RPQ_BENCH_VENDOR_DIR}/LAGraph")
+set(GRAPHBLAS_BUILD "${GRAPHBLAS_ROOT}/build")
+set(LAGRAPH_BUILD "${LAGRAPH_ROOT}/build")
 include(AppendCompilerFlags)
 set(CMAKE_OSX_ARCHITECTURES x86_64)
 project(RPQ-Matrix)
@@ -42,26 +48,24 @@ else()
     message(STATUS "CPU does NOT support SSE4.2")
 endif()
 
-include_directories(~/include
-        ${CMAKE_HOME_DIRECTORY}/include
+include_directories(${CMAKE_HOME_DIRECTORY}/include
         ${CMAKE_HOME_DIRECTORY}/nfa/include
         ${CMAKE_HOME_DIRECTORY}/lib/matrix_gn/include
         ${CMAKE_HOME_DIRECTORY}/lib/matrix_p_gn/include
         ${CMAKE_HOME_DIRECTORY}/lib/baseline_gn/include
-        ${CMAKE_HOME_DIRECTORY}/../GraphBLAS/Include
-        ${CMAKE_HOME_DIRECTORY}/..LAGraph/include)
+        ${GRAPHBLAS_ROOT}/Include
+        ${LAGRAPH_ROOT}/include)
 
-link_directories(~/lib
-        ${CMAKE_HOME_DIRECTORY}/../GraphBLAS/build
-        ${CMAKE_HOME_DIRECTORY}/../LAGraph/build/src)
+link_directories(${GRAPHBLAS_BUILD}
+        ${LAGRAPH_BUILD}/src)
+
+set(CMAKE_BUILD_RPATH "${GRAPHBLAS_BUILD};${LAGRAPH_BUILD}/src")
+set(CMAKE_INSTALL_RPATH "${GRAPHBLAS_BUILD};${LAGRAPH_BUILD}/src")
 
 add_subdirectory(nfa)
 add_subdirectory(lib/matrix_gn)
 add_subdirectory(lib/matrix_p_gn)
 add_subdirectory(lib/baseline_gn)
-# add_subdirectory(../GraphBLAS/Include)
-# add_subdirectory(../LAGraph/include)
-
 # add_executable(k2_tree_query src/k2_tree_query.cpp)
 # target_link_libraries(k2_tree_query matrix_gn nfa)
 

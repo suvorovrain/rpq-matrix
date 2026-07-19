@@ -3,8 +3,8 @@
 #include <string>
 extern "C"
 {
-#include "../../../GraphBLAS/Include/GraphBLAS.h"
-#include "../../../LAGraph/include/LAGraph.h"
+#include <GraphBLAS.h>
+#include <LAGraph.h>
 }
 
 #ifndef RPQ_MATRIX_BASELINEGB_HPP
