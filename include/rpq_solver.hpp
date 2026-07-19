@@ -6,10 +6,6 @@
 #ifndef MATRIX_RPQ_RPQ_SOLVER_HPP
 #define MATRIX_RPQ_RPQ_SOLVER_HPP
 
-// #define N 958844164
-#define SIZE 9 // 1 to 5419
-// #define V 296008192 // 1 to...
-
 #ifndef ww
 #define ww (8 * sizeof(uint64_t))
 #endif
@@ -54,6 +50,7 @@ namespace rpq
         // std::vector<matrix> m_tmp_matrices;
         std::unordered_map<std::string, uint64_t> m_map_SO;
         std::unordered_map<std::string, uint64_t> m_map_P;
+        uint64_t m_predicate_offset;
 
         inline matrix get_matrix(s_matrix &a, matrix m, bool is_tranposed)
         {
@@ -70,9 +67,9 @@ namespace rpq
             {
             case STR:
             {
-                auto pred = rpqTree->getPred(node->pos);
-                matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
-                res.insert(res.begin(), data_type{a, (pred > SIZE),
+                uint64_t pred = static_cast<uint64_t>(rpqTree->getPred(node->pos));
+                matrix a = (pred > m_predicate_offset) ? m_matrices[pred - m_predicate_offset] : m_matrices[pred];
+                res.insert(res.begin(), data_type{a, (pred > m_predicate_offset),
                                                   false, false});
                 break;
             }
@@ -295,18 +292,18 @@ namespace rpq
             {
             case STR:
             {
-                auto pred = rpqTree->getPred(node->pos);
+                uint64_t pred = static_cast<uint64_t>(rpqTree->getPred(node->pos));
                 if (parentType != ROOT)
                 {
-                    matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
-                    res.insert(res.begin(), data_type{a, (pred > SIZE), false, false});
+                    matrix a = (pred > m_predicate_offset) ? m_matrices[pred - m_predicate_offset] : m_matrices[pred];
+                    res.insert(res.begin(), data_type{a, (pred > m_predicate_offset), false, false});
                 }
                 else
                 {
-                    matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
+                    matrix a = (pred > m_predicate_offset) ? m_matrices[pred - m_predicate_offset] : m_matrices[pred];
                     matrix A;
                     s_matrix sA;
-                    A = get_matrix(sA, a, (pred > SIZE));
+                    A = get_matrix(sA, a, (pred > m_predicate_offset));
                     GrB_Index height, width;
                     GrB_Matrix_nrows(&height, A);
                     GrB_Matrix_ncols(&width, A);
@@ -621,18 +618,18 @@ namespace rpq
             {
             case STR:
             {
-                auto pred = rpqTree->getPred(node->pos);
+                uint64_t pred = static_cast<uint64_t>(rpqTree->getPred(node->pos));
                 if (parentType != ROOT)
                 {
-                    matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
-                    res.insert(res.begin(), data_type{a, (pred > SIZE), false, false});
+                    matrix a = (pred > m_predicate_offset) ? m_matrices[pred - m_predicate_offset] : m_matrices[pred];
+                    res.insert(res.begin(), data_type{a, (pred > m_predicate_offset), false, false});
                 }
                 else
                 {
                     matrix A;
                     s_matrix sA;
-                    matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
-                    A = get_matrix(sA, a, (pred > SIZE));
+                    matrix a = (pred > m_predicate_offset) ? m_matrices[pred - m_predicate_offset] : m_matrices[pred];
+                    A = get_matrix(sA, a, (pred > m_predicate_offset));
                     GrB_Index height, width;
                     GrB_Matrix_nrows(&height, A);
                     GrB_Matrix_ncols(&width, A);
@@ -927,18 +924,18 @@ namespace rpq
             {
             case STR:
             {
-                auto pred = rpqTree->getPred(node->pos);
+                uint64_t pred = static_cast<uint64_t>(rpqTree->getPred(node->pos));
                 if (parentType != ROOT)
                 {
-                    matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
-                    res.insert(res.begin(), data_type{a, (pred > SIZE), false, false});
+                    matrix a = (pred > m_predicate_offset) ? m_matrices[pred - m_predicate_offset] : m_matrices[pred];
+                    res.insert(res.begin(), data_type{a, (pred > m_predicate_offset), false, false});
                 }
                 else
                 {
                     matrix A;
                     s_matrix sA;
-                    matrix a = (pred > SIZE) ? m_matrices[pred - SIZE] : m_matrices[pred];
-                    A = get_matrix(sA, a, (pred > SIZE));
+                    matrix a = (pred > m_predicate_offset) ? m_matrices[pred - m_predicate_offset] : m_matrices[pred];
+                    A = get_matrix(sA, a, (pred > m_predicate_offset));
                     GrB_Index height, width;
                     GrB_Matrix_nrows(&height, A);
                     GrB_Matrix_ncols(&width, A);
@@ -1261,7 +1258,9 @@ namespace rpq
 
         explicit solver(const std::string &dataset, const std::string &index,
                         const uint n_preds, const uint n_triples)
+            : m_predicate_offset(static_cast<uint64_t>(n_preds) + 1)
         {
+            (void)n_triples;
 
             m_matrices.resize(n_preds + 1);
             mcsr_matrices.resize(n_preds + 1);
@@ -1316,12 +1315,12 @@ namespace rpq
             }
             // std::cout << " done." << std::endl;
 
-            /*double_t bits = std::ceil(std::log2(N)) * (SIZE-1);
+            /*double_t bits = std::ceil(std::log2(n_triples)) * (m_predicate_offset-1);
             for(uint64_t j = 1; j < m_matrices.size(); ++j){
                 bits = bits + std::ceil(std::log2(m_matrices[j]->elems)) * m_matrices[j]->elems;
             }
             double_t bytes = bits / 8;
-            double_t bpt = bytes / N;
+            double_t bpt = bytes / n_triples;
             std::cout << "====== VP =====" << std::endl;
             std::cout << bits << " (bits)" << std::endl;
             std::cout << bytes << " (bytes)" << std::endl;
@@ -1332,8 +1331,10 @@ namespace rpq
         {
             list_type res;
             m_matrices = mcsr_matrices;
-            RpqTree rpqTree(query, map_P, m_matrices.size());
+            RpqTree rpqTree(query, map_P, m_predicate_offset);
+            // std::cout << "!!!!\n";
             traversal(&rpqTree, rpqTree.root(), ROOT, res);
+            // std::cout << "!!!!!\n";
             return res.front();
         }
 
@@ -1343,7 +1344,7 @@ namespace rpq
             m_matrices = mcsr_matrices;
 
             GrB_Global_set_INT32(GrB_GLOBAL, 2, GrB_STORAGE_ORIENTATION_HINT);
-            RpqTree rpqTree(query, map_P, m_matrices.size());
+            RpqTree rpqTree(query, map_P, m_predicate_offset);
             traversal_row_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, res);
             return res.front();
         }
@@ -1354,7 +1355,7 @@ namespace rpq
             m_matrices = mcsc_matrices;
 
             GrB_Global_set_INT32(GrB_GLOBAL, 1, GrB_STORAGE_ORIENTATION_HINT);
-            RpqTree rpqTree(query, map_P, m_matrices.size());
+            RpqTree rpqTree(query, map_P, m_predicate_offset);
 
             traversal_col_fixed(&rpqTree, rpqTree.root(), ROOT, o_id, res);
             return res.front();
@@ -1364,7 +1365,7 @@ namespace rpq
         {
             list_type res;
             m_matrices = mcsr_matrices;
-            RpqTree rpqTree(query, map_P, m_matrices.size());
+            RpqTree rpqTree(query, map_P, m_predicate_offset);
             traversal_row_col_fixed(&rpqTree, rpqTree.root(), ROOT, s_id, o_id, res);
             return res.front();
         }
