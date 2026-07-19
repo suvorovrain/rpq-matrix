@@ -32,13 +32,13 @@ typedef unsigned long mask;
 #define ZEROS ((mask)0)
 #define ONES ((mask)~0)
 
-#define W (8*sizeof(mask))
+#define WW (8*sizeof(mask))
                                                                                 
 	/* multiword masks. the normal operations are extended, l is
 	   the length of the mask in bits */
 
 typedef mask *Mask;
-#define maskSize(l) ((l+W-1)/W)
+#define maskSize(l) ((l+WW-1)/WW)
 
 	/* in general op(m,m1) is m <= m op m1; return m */
 

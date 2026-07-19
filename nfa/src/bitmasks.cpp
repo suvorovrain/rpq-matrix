@@ -88,7 +88,7 @@ boolean EQUAL (Mask m1, Mask m2, int l)
 
 boolean ISSET (Mask m, int i)
 
-  { return (m[i/W] & (ONE << (i % W))) != 0;
+  { return (m[i/WW] & (ONE << (i % WW))) != 0;
   }
 
 boolean ISZERO (Mask m, int l)
@@ -109,21 +109,21 @@ int ONEBITS (Mask m, int l)
 
 Mask SET (Mask m, int i)
 
-  { m[i/W] |= ONE << (i % W);
+  { m[i/WW] |= ONE << (i % WW);
     return m;
   }
 
 Mask CLEAR (Mask m, int i)
 
-  { m[i/W] &= ~ (ONE << (i % W));
+  { m[i/WW] &= ~ (ONE << (i % WW));
     return m;
   }
 
 mask SLICE (Mask m, int from, int len)
 
-  { int i = from / W;
-    mask msk = (len == W) ? ONES : ((ONE<<len)-ONE);
-    from %= W;
+  { int i = from / WW;
+    mask msk = (len == WW) ? ONES : ((ONE<<len)-ONE);
+    from %= WW;
     return (m[i] >> from) & msk;
   }
 
