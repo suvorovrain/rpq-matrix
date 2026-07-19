@@ -113,7 +113,7 @@ namespace bm_baselinegb
             GrB_Matrix_ncols(&ncols, A);
             GrB_Matrix B;
 
-            GrB_Matrix_resize(A, nrows + 1, ncols + 1);
+            // GrB_Matrix_resize(A, nrows + 1, ncols + 1);
             GrB_Matrix_dup(&B, A);
             GrB_Matrix_wait(A, GrB_MATERIALIZE);
 
