@@ -246,9 +246,9 @@ namespace rpq
         uint64_t i = 1;
         uint64_t elems;
         std::ifstream ifs_q(queries);
-        do
+        while (getline(ifs_q, line))
         {
-            getline(ifs_q, line);
+            if (line.empty()) continue;
             l2 = line;
             query.clear();
 
@@ -305,7 +305,7 @@ namespace rpq
                 }
             }
             ++i;
-        } while (!ifs_q.eof());
+        }
         ifs_q.close();
     }
 }
