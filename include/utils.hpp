@@ -250,8 +250,8 @@ namespace rpq
         {
             if (line.empty()) continue;
             std::string query_id = std::to_string(i);
-            std::string::size_type separator = line.find('\t');
-            if (separator != std::string::npos)
+            std::string::size_type separator = line.find(' ');
+            if (separator != std::string::npos && separator > 0 && std::all_of(line.begin(), line.begin() + separator, [](char digit) { return digit >= '0' && digit <= '9'; }))
             {
                 query_id = line.substr(0, separator);
                 line.erase(0, separator + 1);
