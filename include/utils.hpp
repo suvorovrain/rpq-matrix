@@ -235,7 +235,7 @@ namespace rpq
     }
 
     template <class wrapper_type> // GB!
-    void run_query(const std::string &dataset, const std::string &index, const std::string &queries, uint n_preds, uint n_triples)
+    void run_query(const std::string &dataset, const std::string &index, const std::string &queries, uint n_preds, uint n_triples, uint64_t runs = 1, uint64_t warmup_runs = 0)
     {
         typedef rpq::solver<wrapper_type> solver_type;
         typedef typename solver_type::matrix matrix;
@@ -249,59 +249,70 @@ namespace rpq
         while (getline(ifs_q, line))
         {
             if (line.empty()) continue;
-            l2 = line;
-            query.clear();
-
-            bool flag_s, flag_o;
-            int s_id, o_id;
-            bool ok = rpq::utils::parse_query(line, solver.map_SO, solver.map_P, query, flag_s, s_id, flag_o, o_id);
-            if (!ok)
+            std::string query_id = std::to_string(i);
+            std::string::size_type separator = line.find('\t');
+            if (separator != std::string::npos)
             {
-                std::cout << i << ";0;0" << std::endl;
+                query_id = line.substr(0, separator);
+                line.erase(0, separator + 1);
             }
-            else
+            l2 = line;
+            for (uint64_t repetition = 0; repetition < warmup_runs + runs; ++repetition)
             {
-                query = rpq::utils::remove_unnecessary_parentheses(query);
-                // std::cerr << query << std::endl;
+                line = l2;
+                query.clear();
 
-                auto t1 = std::chrono::high_resolution_clock::now();
-                wrapper_type::time_begin();
-                // auto t1 = std::chrono::high_resolution_clock::now();
-                typename solver_type::data_type res;
-                bool rem = false;
-                if (!flag_o && !flag_s)
+                bool flag_s, flag_o;
+                int s_id, o_id;
+                bool ok = rpq::utils::parse_query(line, solver.map_SO, solver.map_P, query, flag_s, s_id, flag_o, o_id);
+                if (!ok)
                 {
-                    res = solver.solve_var_to_var(query, rem);
-                }
-                 else if (flag_o && !flag_s) {
-                    res = solver.solve_var_to_con(query, o_id, rem);
-                } else if (!flag_o && flag_s) {
-                    res = solver.solve_con_to_var(query, s_id, rem);
-                } else{
-                    res = solver.solve_con_to_con(query, s_id, o_id, rem);
-                }
-                if (res.is_transposed)
-                {
-                    s_matrix m = wrapper_type::transpose(res.m);
-                    auto t2 = std::chrono::high_resolution_clock::now();
-                    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-                    // (*** get number of nonzero values ***)
-                    GrB_Index nvals;
-                    GrB_Matrix_nvals(&nvals, res.m);
-
-                    std::cout << i << ";" << nvals << ";" << t << std::endl;
+                    std::cout << query_id << ";0;0" << std::endl;
                 }
                 else
                 {
-                    auto t2 = std::chrono::high_resolution_clock::now();
-                    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-                    // (*** get number of nonzero values ***)
-                    GrB_Index nvals;
-                    GrB_Matrix_nvals(&nvals, res.m);
-                    
-                    std::cout << i << ";" << nvals << ";" << t<< std::endl;
-                    if (res.is_tmp)
-                        wrapper_type::destroy(res.m);
+                    query = rpq::utils::remove_unnecessary_parentheses(query);
+                    // std::cerr << query << std::endl;
+
+                    auto t1 = std::chrono::high_resolution_clock::now();
+                    wrapper_type::time_begin();
+                    // auto t1 = std::chrono::high_resolution_clock::now();
+                    typename solver_type::data_type res;
+                    bool rem = false;
+                    if (!flag_o && !flag_s)
+                    {
+                        res = solver.solve_var_to_var(query, rem);
+                    }
+                     else if (flag_o && !flag_s) {
+                        res = solver.solve_var_to_con(query, o_id, rem);
+                    } else if (!flag_o && flag_s) {
+                        res = solver.solve_con_to_var(query, s_id, rem);
+                    } else{
+                        res = solver.solve_con_to_con(query, s_id, o_id, rem);
+                    }
+                    if (res.is_transposed)
+                    {
+                        s_matrix m = wrapper_type::transpose(res.m);
+                        auto t2 = std::chrono::high_resolution_clock::now();
+                        auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+                        // (*** get number of nonzero values ***)
+                        GrB_Index nvals;
+                        GrB_Matrix_nvals(&nvals, res.m);
+
+                        std::cout << query_id << ";" << nvals << ";" << t << std::endl;
+                    }
+                    else
+                    {
+                        auto t2 = std::chrono::high_resolution_clock::now();
+                        auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+                        // (*** get number of nonzero values ***)
+                        GrB_Index nvals;
+                        GrB_Matrix_nvals(&nvals, res.m);
+
+                        std::cout << query_id << ";" << nvals << ";" << t<< std::endl;
+                        if (res.is_tmp)
+                            wrapper_type::destroy(res.m);
+                    }
                 }
             }
             ++i;
